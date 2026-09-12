@@ -33,7 +33,7 @@ story in its epic.
 
 | Story | Status | Detail |
 |---|---|---|
-| 01.1 | `in-progress` | [Repository & app structure](backlog/epic-01-foundation/01.1.md) |
+| 01.1 | `in-qa` | [Repository & app structure](backlog/epic-01-foundation/01.1.md) |
 
 ## Needs status review
 

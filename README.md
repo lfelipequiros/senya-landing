@@ -1,10 +1,24 @@
 # Senya 1st Landing
 
-(to define: a one-sentence description of what this project is — resolve during the `qcode-charter` pass.)
+A gated, animation-led launch experience for the Senya clothing brand that converts pre-launch
+curiosity into a contact list. See [`CLAUDE.md` §1](CLAUDE.md) for the full framing and
+[`architecture/00-overview.md`](architecture/00-overview.md) for the technical shape.
 
-(to define: a short paragraph — what it does, for whom — resolve during the `qcode-charter` pass.)
+**Hosted on:** GitHub, deployed on Vercel.
 
-**Hosted on:** GitHub
+## Running the app
+
+```sh
+npm install
+npm run dev        # local dev server
+npm run typecheck  # strict TS, project-wide
+npm run lint
+npm run test        # vitest
+npm run build       # production build
+```
+
+Copy [`.env.example`](.env.example) to `.env` and fill in real values before running anything that
+touches the data seam or the code gate. Stack and architecture: [`architecture/00-overview.md`](architecture/00-overview.md).
 
 ## Where things live
 
