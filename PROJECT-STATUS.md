@@ -15,13 +15,15 @@ copies content that lives in another file (debt, questions, decisions, specs); i
 > only through them, in the same step as the work. If backlog or code changed, this board changed
 > with it — a stale board is a bug.
 
-**Updated:** 2026-09-12 · **Phase:** Planning — scaffold complete, no code yet · **Active:** none · **Next up:** Epic 01 (Foundation)
+**Updated:** 2026-09-11 · **Phase:** Planning — product shaped, no code yet · **Active:** none · **Next up:** Epic 01 (Foundation), then Epic 02 via `tech-planning`
 
 ## Epics
 
 | # | Epic | Status | Detail |
 |---|------|--------|--------|
 | 01 | Foundation | `planned` | [epic-01](backlog/epic-01-foundation/README.md) |
+| 02 | The Gated Flow | `raised` | [epic-02](backlog/epic-02-gated-flow/README.md) |
+| 03 | Brand & Motion Identity | `raised` | [epic-03](backlog/epic-03-brand-motion/README.md) |
 | 08 | Ad-hoc & improvements | `planned` | [08-adhoc](backlog/08-adhoc/README.md) |
 
 ## Active increments

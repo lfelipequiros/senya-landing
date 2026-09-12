@@ -51,11 +51,13 @@ A static pass over the diff. Use the engine, then add the layer it doesn't know:
    git.)
 2. **Then check this project's invariants** `code-review` has no knowledge of (full detail in
    [`CLAUDE.md`](../../../CLAUDE.md) §6 and the [`architecture/`](../../../architecture/) ASD):
-   - **Seams stay sealed** — *(to define: the project's seam invariants, from `architecture/`. E.g.
-     "consumers read only through (to define: a typed data-access package name, or "n/a" — resolve during the `qcode-charter` pass.), never raw tables.")*
+   - **Seams stay sealed** — consumers read/write leads only through `LeadsRepository`
+     (`src/server/data/leadsRepository.ts`, ADR-003), never a raw Supabase client or SQL; the access
+     code and the Supabase service key are read only inside the two API routes, never by the client
+     (ADR-004).
    - **Tenancy** — single-tenant: the tenant key on every tenant-scoped row/read.
-   - **No schema change without the matching (to define: a typed data-access package name, or "n/a" — resolve during the `qcode-charter` pass.) update** in the same change set.
-   - **House standards** — (to define: the engineering non-negotiables — resolve during the `qcode-charter` pass.); `Result<T>`, validation at boundaries,
+   - **No schema change without the matching `LeadsRepository` (src/server/data/leadsRepository.ts, ADR-003) update** in the same change set.
+   - **House standards** — the CLAUDE.md §6 ledger; `Result<T>`, validation at boundaries,
      strict types.
    - **Story alignment** — the diff implements the approved increment: nothing more (no silent scope
      creep), nothing less.

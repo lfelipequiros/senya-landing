@@ -63,12 +63,13 @@ Checked on paper at plan-time; coding is where they become real. They live in
 [`CLAUDE.md`](../../../CLAUDE.md) §6 and the [`architecture/`](../../../architecture/) ASD — follow
 them there. The ones most often dropped mid-build:
 
-- **Seams stay sealed** — *(to define: the project's seam invariants, from `architecture/`. E.g.
-  "consumers read only through (to define: a typed data-access package name, or "n/a" — resolve during the `qcode-charter` pass.), never raw tables.")*
+- **Seams stay sealed** — consumers read/write leads only through `LeadsRepository`
+  (`src/server/data/leadsRepository.ts`, ADR-003), never a raw Supabase client or SQL; the access code
+  and the Supabase service key are read only inside the two API routes, never by the client (ADR-004).
 - **Tenancy** — single-tenant: the tenant key on every tenant-scoped row and read.
-- **No schema change without the matching (to define: a typed data-access package name, or "n/a" — resolve during the `qcode-charter` pass.) update in the same change set** — a
+- **No schema change without the matching `LeadsRepository` (src/server/data/leadsRepository.ts, ADR-003) update in the same change set** — a
   migration that ships without its access-layer update breaks consumers silently.
-- **House standards** — (to define: the engineering non-negotiables — resolve during the `qcode-charter` pass.); `Result<T>` across service boundaries,
+- **House standards** — the CLAUDE.md §6 ledger; `Result<T>` across service boundaries,
   validation at every external boundary, strict types, structured logs.
 - **If this project has more than one app**, that app's own `CLAUDE.md` (see the root file's nested-
   `CLAUDE.md` precedence section) governs its internals and session conventions on top of this gate —
@@ -109,7 +110,7 @@ a future session reading the story sees what was *actually* built, not what was 
 - **Checks pass** — run the project's typecheck, lint, and tests. Report failures honestly with
   output; don't paper over a red test.
 - **Debt and schema are honest** — every shortcut is in `TECH-DEBT.md` with a trigger, and no schema
-  change shipped without its (to define: a typed data-access package name, or "n/a" — resolve during the `qcode-charter` pass.) update.
+  change shipped without its `LeadsRepository` (src/server/data/leadsRepository.ts, ADR-003) update.
 
 This step is the *builder's self-check*. For anything beyond the trivial, hand off to
 [`tech-qa`](../tech-qa/SKILL.md) for the **independent** done-done pass before the work is actually

@@ -19,9 +19,23 @@ reads better for this project; the shape stays the same.)*
 
 ## Surfaces
 
+The product has **one surface with four states**, not four surfaces. The scenes are a state machine
+([PDR-002](decisions.md)): only scenes 1–2 are reachable by URL, and 3–4 exist only as the result of a
+cleared gate. They're listed separately below because each has a genuinely distinct job, but a change to
+any of them is a change to the same surface.
+
 | Route / Entry point | Surface | Job to be done (one line) | Owning epic | Status |
 |---|---|---|---|---|
-| *(none yet — `product-check` adds a row per surface as requirements land)* | | | | |
+| `/` — scene 1 | Opening | Assert the brand is worth attention and earn the scroll — no navigation, no explanation. | [02](../backlog/epic-02-gated-flow/README.md) | `raised` |
+| `/` — scene 2 (on scroll) | The code gate | Separate invited visitors from passers-by with one shared code; wrong code ends the run. | [02](../backlog/epic-02-gated-flow/README.md) | `raised` |
+| `/` — scene 3 (gate cleared) | The lead form | Capture name, email, and phone/WhatsApp with as little friction as possible. | [02](../backlog/epic-02-gated-flow/README.md) | `raised` |
+| `/` — scene 4 (submitted) | Confirmation / already-listed | Leave no doubt the visitor is on the list — two endings, new and returning. | [02](../backlog/epic-02-gated-flow/README.md) | `raised` |
 
-**Not a product surface (infra only, no job of its own):** *(list auth gates, redirects, or other
-plumbing routes here as they appear — not tracked in the table above.)*
+**Not a product surface (infra only, no job of its own):**
+
+- **The capture write path** ([02.7](../backlog/epic-02-gated-flow/02.7.md)) — the endpoint behind scene
+  3's submit and scene 4's branch. Produces the project's only durable output, but has no job a visitor
+  perceives.
+- **No admin or list-reading surface exists**, deliberately. The owner chose capture-only for the first
+  build; the list is retrieved directly from the store. Recorded here so its absence reads as a decision
+  rather than an oversight.

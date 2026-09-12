@@ -119,7 +119,7 @@ the filename:
 
 **What & why.** <The outcome, in the user's terms.>
 
-**Value archetype.** <one of (to define: the 1–3 ways this project creates value — resolve during the `qcode-charter` pass.) | enabler> — <one line justifying it>.
+**Value archetype.** <one of Acquisition | Brand perception | enabler> — <one line justifying it>.
 
 **Architecture alignment.** <Which ASD files / ADRs / seams this touches, and the confirmation it
 obeys them. Cite the docs.>
@@ -150,11 +150,11 @@ Confirm each in the story, or route a genuine deviation through the decision lan
 
 - **Tenancy** — single-tenant: every tenant-scoped row/read carries/filters the tenant key; nothing
   assumes a single tenant unless the project is single-tenant.
-- **Seams stay sealed** — *(to define: the project's seam invariants — e.g. "sources stay behind the
-  connector interface; consumers read only through (to define: a typed data-access package name, or "n/a" — resolve during the `qcode-charter` pass.), never raw tables." Fill from
-  `architecture/00-overview.md` once the seams are defined.)*
-- **No schema change without the matching (to define: a typed data-access package name, or "n/a" — resolve during the `qcode-charter` pass.) update** in the same change set.
-- **House engineering standards** — (to define: the engineering non-negotiables — resolve during the `qcode-charter` pass.); `Result<T>`, validation at
+- **Seams stay sealed** — consumers read/write leads only through `LeadsRepository`
+  (`src/server/data/leadsRepository.ts`, ADR-003), never a raw Supabase client or SQL; the access code
+  and the Supabase service key are read only inside the two API routes, never by the client (ADR-004).
+- **No schema change without the matching `LeadsRepository` (src/server/data/leadsRepository.ts, ADR-003) update** in the same change set.
+- **House engineering standards** — the CLAUDE.md §6 ledger; `Result<T>`, validation at
   boundaries, strict types (CLAUDE.md §6).
 - **Stage-gated** — don't introduce new infrastructure unless its named trigger fired (architecture
   overview). If you reach for one, say which trigger fired.

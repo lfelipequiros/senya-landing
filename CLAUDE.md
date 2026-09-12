@@ -27,9 +27,17 @@ contract below). Neither silently overrides the other.
 
 ## 1. What Senya 1st Landing Is
 
-(to define: a one-sentence description of what this project is — resolve during the `qcode-charter` pass.)
+A gated, animation-led launch experience for the **Senya** clothing brand that converts pre-launch
+curiosity into a contact list.
 
-(to define: a short paragraph — what it does, for whom — resolve during the `qcode-charter` pass.)
+A visitor arrives at a single web experience that opens with a brand animation, reveals an access-code
+gate on scroll, and — once the code is accepted — asks for their name, email, and phone/WhatsApp before
+closing on a confirmation. The code is a single shared secret distributed through the brand's own
+channels, so the gate is what makes the list feel earned rather than harvested. Two audiences: the
+**prospective customer** who moves through the experience, and the **brand owner** who receives the
+resulting contact list. The experience is deliberately stateless — it replays in full on every visit,
+and a wrong code ends the run rather than offering a retry — because the drama of the gate is itself
+part of what the brand is saying.
 
 ---
 
@@ -47,7 +55,20 @@ contract below). Neither silently overrides the other.
 Every candidate feature, integration, or stack choice must be justifiable against **at least one**
 value archetype. If it can't, it waits.
 
-(to define: the 1–3 ways this project creates value — resolve during the `qcode-charter` pass.)
+- **Acquisition** — a captured, reachable contact is the asset this project exists to produce. Anything
+  that measurably raises completed signups (or the quality of what's captured) scores here.
+- **Brand perception** — the experience *is* a brand statement, not packaging around a form. This is
+  what justifies spending on motion, pacing, and a theatrical failure state that a plain form would
+  never earn. A change that makes the product feel more like Senya scores here even with no lift in
+  signups.
+- **Enabler** — no direct value; justified only as the substrate something above depends on
+  (Foundation, the seam, CI).
+
+**The tension to hold consciously:** Acquisition and Brand perception pull against each other here by
+design — the access gate, the stateless replay, and the no-retry glitch all *cost* signups to *buy*
+exclusivity. That trade is deliberate and owner-approved (see [PDR-001](product/decisions.md)); it is
+not a defect to optimize away, but it does mean any story claiming both archetypes should say which one
+it's actually serving.
 
 Secondary value (better decisions, momentum) is real but should be tied back to an archetype wherever
 possible to keep priorities honest.
@@ -77,17 +98,23 @@ implementation only after approval.
 
 ## 5. Tech & Architecture
 
-- **Hosting / serverless:** (to define: hosting/serverless platform, or "none" — resolve during the `qcode-charter` pass.)
-- **Frontend:** (to define: frontend stack, or "none" — resolve during the `qcode-charter` pass.)
-- **Backend:** (to define: backend stack, or "none" — resolve during the `qcode-charter` pass.)
-- **Data store:** (to define: data store, or "none" — resolve during the `qcode-charter` pass.)
-- **AI:** (to define: AI stack, or "none" — resolve during the `qcode-charter` pass.)
-- **Data-access seam:** (to define: a typed data-access package name, or "n/a" — resolve during the `qcode-charter` pass.)
+- **Hosting / serverless:** Vercel (static frontend + two serverless API routes).
+- **Frontend:** Vite + React + TypeScript (strict), Framer Motion for all motion.
+- **Backend:** Two Vercel serverless functions (`/api/verify-code`, `/api/leads`) — no separate backend
+  framework.
+- **Data store:** Supabase Postgres, one table (`leads`).
+- **AI:** none.
+- **Data-access seam:** `src/server/data/leadsRepository.ts` — the `LeadsRepository` interface
+  (ADR-003).
 
-**Architecture overview:** (to define: the layers + the seams that hold them apart — resolve during the `qcode-charter` pass.)
+**Architecture overview:** one Vite app → two serverless API routes → one data seam → one Postgres
+table. Full diagram and schema in [`architecture/00-overview.md`](architecture/00-overview.md).
 
-*(to define: the project's stable seams/interfaces and core data model — settle in
-`architecture/` during foundation and record each decision as an ADR.)*
+**Seams (ADR-002, ADR-003, ADR-004):**
+1. **The data seam** — everything talks to `leads` only through `LeadsRepository`
+   (`src/server/data/leadsRepository.ts`); no raw Supabase client or SQL outside that file.
+2. **The secret seam** — the access code and the Supabase service key are read only inside the two API
+   routes; the client never receives either.
 
 ---
 
@@ -99,13 +126,15 @@ because it sounded like good hygiene in the abstract. When you add one, say what
 it would have prevented; a standard with no incident behind it is a guess wearing a rule's clothes,
 and it's fair game to challenge.
 
-(to define: the engineering non-negotiables — resolve during the `qcode-charter` pass.)
-
-- Typed result wrapper `Result<T>` for service-layer returns.
-- Schema validation at every external boundary.
-- Strict types across the repo.
-- Structured / prefixed logs for readability.
-- **No schema change without the corresponding data-access update** in the same change set.
+- Typed result wrapper `Result<T>` for service-layer returns — every `LeadsRepository` method and both
+  API route handlers return `Result<T>`, never throw across that boundary.
+- Schema validation (`zod`) at every external boundary — both API routes validate their request body
+  before it touches the seam.
+- Strict types across the repo (`tsconfig.json` `strict: true`).
+- Structured / prefixed logs for readability (`[leads]`, `[verify-code]`) — never log personal data
+  (name/email/phone) or the access code, at any log level.
+- **No schema change without the corresponding data-access update** in the same change set — a Supabase
+  migration ships with its matching `LeadsRepository` change, always.
 
 ---
 
@@ -244,14 +273,22 @@ tech-build, record-learnings, compass-check, handoff, and ad-hoc work; the plan'
 tech-planning judgment and the tech-qa / code-review pass on high-stakes or architecture-heavy
 stories; the most expensive/frontier model **only by explicit, named exception** — never a
 routine-gate default. Default effort **medium**; raise only for the build/QA of complex increments.
-*(to define: fill `Pro` during foundation — Pro/Max-5x/Max-20x/API — it changes how
-aggressively this trade-off matters.)*
+Plan tier: Pro. This makes the cheapest-capable-model default a real cost lever, not a formality —
+default to it deliberately for `tech-build`/`record-learnings`/`compass-check`/`handoff`/ad-hoc work,
+and reserve the top-tier model for `tech-planning` judgment and QA on architecture-heavy stories, per
+the standing exception this session runs under: **every `tech-qa` pass for this project is spun off to
+an Opus subagent**, regardless of story stakes, for review independence (a fresh model, not just a
+fresh context) — build and planning stay on the plan's default model.
 
 ---
 
 ## 8. Constraints & Prohibitions
 
-- **No new infrastructure** until its stage-gating trigger fires.
+- **No new infrastructure** until its stage-gating trigger fires (named list: `architecture/00-overview.md`).
 - **No schema changes** without corresponding data-access updates.
 - **No code without an approved plan.**
-- *(to define: project-specific prohibitions — add during foundation.)*
+- **The access code and the Supabase service key never reach the client** — no exceptions, no debug
+  bypass left in shipped code (ADR-004).
+- **No raw Supabase client or SQL access outside `src/server/data/leadsRepository.ts`** (ADR-003).
+- **No personal data (name/email/phone) or the access code in logs, error messages, or client-visible
+  output**, at any log level.
