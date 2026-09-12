@@ -15,7 +15,7 @@ copies content that lives in another file (debt, questions, decisions, specs); i
 > only through them, in the same step as the work. If backlog or code changed, this board changed
 > with it — a stale board is a bug.
 
-**Updated:** 2026-09-11 · **Phase:** Planning — product shaped, no code yet · **Active:** none · **Next up:** Epic 01 (Foundation), then Epic 02 via `tech-planning`
+**Updated:** 2026-09-11 · **Phase:** Building Epic 01 (Foundation) · **Active:** 01.1 (in QA) · **Next up:** 01.2 Data layer & migration tooling
 
 ## Epics
 
