@@ -21,7 +21,7 @@ copies content that lives in another file (debt, questions, decisions, specs); i
 
 | # | Epic | Status | Detail |
 |---|------|--------|--------|
-| 01 | Foundation | `planned` | [epic-01](backlog/epic-01-foundation/README.md) |
+| 01 | Foundation | `in-progress` | [epic-01](backlog/epic-01-foundation/README.md) |
 | 02 | The Gated Flow | `raised` | [epic-02](backlog/epic-02-gated-flow/README.md) |
 | 03 | Brand & Motion Identity | `raised` | [epic-03](backlog/epic-03-brand-motion/README.md) |
 | 08 | Ad-hoc & improvements | `planned` | [08-adhoc](backlog/08-adhoc/README.md) |
@@ -29,7 +29,11 @@ copies content that lives in another file (debt, questions, decisions, specs); i
 ## Active increments
 
 Stories that are `in-progress` or `in-qa` appear here once pulled, with their status and a link to the
-story in its epic. **None yet.**
+story in its epic.
+
+| Story | Status | Detail |
+|---|---|---|
+| 01.1 | `in-progress` | [Repository & app structure](backlog/epic-01-foundation/01.1.md) |
 
 ## Needs status review
 
