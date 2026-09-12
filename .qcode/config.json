@@ -1,0 +1,33 @@
+{
+  "configVersion": 1,
+  "frameworkVersion": "2.0.0",
+  "scaffoldedAt": "2026-09-12",
+  "compassCheck": true,
+  "tokens": {
+    "ONE_LINER": "(to define: a one-sentence description of what this project is — resolve during the `qcode-charter` pass.)",
+    "DOMAIN_SUMMARY": "(to define: a short paragraph — what it does, for whom — resolve during the `qcode-charter` pass.)",
+    "VALUE_ARCHETYPES": "(to define: the 1–3 ways this project creates value — resolve during the `qcode-charter` pass.)",
+    "DECISION_AXES": "Confidence · Time-to-market · Reliability · ROI",
+    "STACK_HOSTING": "(to define: hosting/serverless platform, or \"none\" — resolve during the `qcode-charter` pass.)",
+    "STACK_FRONTEND": "(to define: frontend stack, or \"none\" — resolve during the `qcode-charter` pass.)",
+    "STACK_BACKEND": "(to define: backend stack, or \"none\" — resolve during the `qcode-charter` pass.)",
+    "STACK_DATA": "(to define: data store, or \"none\" — resolve during the `qcode-charter` pass.)",
+    "STACK_AI": "(to define: AI stack, or \"none\" — resolve during the `qcode-charter` pass.)",
+    "TENANCY": "single-tenant",
+    "TYPED_RESULT_NAME": "Result<T>",
+    "ACCESS_LAYER": "(to define: a typed data-access package name, or \"n/a\" — resolve during the `qcode-charter` pass.)",
+    "HOUSE_STANDARDS": "(to define: the engineering non-negotiables — resolve during the `qcode-charter` pass.)",
+    "ARCHITECTURE_OVERVIEW": "(to define: the layers + the seams that hold them apart — resolve during the `qcode-charter` pass.)",
+    "PRODUCT_CONSUMERS": "(to define: who reads/acts on this project's product surfaces, or \"n/a\" — resolve during the `qcode-charter` pass.)",
+    "CLAUDE_PLAN": "Pro",
+    "TEAM_CONTEXT": "solo developer",
+    "EPIC_TABLE": "",
+    "EPIC_TABLE_ROADMAP": "",
+    "PROJECT_NAME": "Senya 1st Landing",
+    "PROJECT_SLUG": "senya-landing",
+    "OWNER_NAME": "Felipe Quiros",
+    "REPO_HOST": "GitHub",
+    "TODAY": "2026-09-12",
+    "FRAMEWORK_VERSION": "2.0.0"
+  }
+}
