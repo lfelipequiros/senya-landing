@@ -26,9 +26,7 @@ const tsBase = {
 
 export default [
   {
-    // Framework-owned (QCode-Method scaffold, re-rendered by `qcode.mjs sync`) — not this
-    // story's app code; linting it here would drift the moment a sync overwrites it.
-    ignores: ["dist", "cockpit/**", "scripts/**", "coverage"],
+    ignores: ["dist", "coverage"],
   },
   js.configs.recommended,
   {

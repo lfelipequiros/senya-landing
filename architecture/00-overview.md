@@ -84,10 +84,10 @@ hold even under a concurrent double-submit, not only in application code (02.7's
 - **No authentication system** — there are no user accounts; the "gate" is a single shared secret
   checked server-side, not an identity system. Trigger: the product needs to recognize a *specific*
   returning person (contradicts PDR-002's statelessness as currently decided).
-- **No rate limiting yet** — tracked as a named launch-blocker in `TECH-DEBT.md`, not silently skipped.
+- **No rate limiting yet** — a named launch-blocker, not silently skipped. Add before launch.
 - **No e2e test runner (Playwright) yet** — component/unit tests (Vitest) cover the state machine and
   the API routes first. Trigger: the motion choreography itself needs regression coverage a unit test
-  can't give (revisit once Epic 02's scene stories are built and something has broken twice).
+  can't give (revisit once S1's scenes are built and something has broken twice).
 
 ## Cross-cutting concerns
 

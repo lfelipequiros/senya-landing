@@ -14,9 +14,6 @@ out/
 coverage/
 *.tsbuildinfo
 
-# ── Build Cockpit — generated artifact (the generator is what's tracked) ─
-cockpit/index.html
-
 # ── Tooling / logs / OS noise ───────────────────────────────────────
 .vercel/
 *.log
