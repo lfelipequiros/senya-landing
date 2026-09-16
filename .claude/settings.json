@@ -13,7 +13,24 @@
       "Bash(git add *)",
       "Bash(git commit *)",
       "Bash(gh pr view*)",
-      "Bash(gh pr list*)"
+      "Bash(gh pr list*)",
+      "Bash(curl -s -X POST http://localhost:5175/api/leads -H \"Content-Type: application/json\" -d '{\"name\":\"Camila\",\"email\":\"camila@example.com\",\"phone\":\"+54 9 11 2345 6789\",\"locale\":\"es\"}')",
+      "Bash(cat /tmp/vite-dev2.log | tail -20)",
+      "Read(//tmp/**)",
+      "Bash(netstat -ano)",
+      "Bash(powershell -Command \"Stop-Process -Id 35088 -Force\")",
+      "Bash(git checkout *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git push *)",
+      "mcp__claude_ai_Vercel__list_deployments",
+      "mcp__claude_ai_Vercel__get_deployment_build_logs",
+      "mcp__claude_ai_Vercel__get_deployment",
+      "Bash(curl -s -i -X POST https://senyastudio.co/api/leads -H \"Content-Type: application/json\" -d '{\"name\":\"Test Lead\",\"email\":\"test-verify-fix@example.com\",\"phone\":\"+54 9 11 0000 0000\",\"locale\":\"es\"}')",
+      "Bash(curl -s -i -X POST https://www.senyastudio.co/api/leads -H \"Content-Type: application/json\" -d '{\"name\":\"Test Lead\",\"email\":\"test-verify-fix@example.com\",\"phone\":\"+54 9 11 0000 0000\",\"locale\":\"es\"}')",
+      "Bash(curl -s -i -X POST https://www.senyastudio.co/api/leads -H \"Content-Type: application/json\" -d '{\"name\":\"Test Lead\",\"email\":\"test-verify-fix-2@example.com\",\"phone\":\"+54 9 11 0000 0000\",\"locale\":\"es\"}')",
+      "mcp__claude_ai_Vercel__get_runtime_errors",
+      "PowerShell(Get-NetTCPConnection -State Listen -LocalPort 5173,3000,4173 -ErrorAction SilentlyContinue | Select-Object LocalPort,OwningProcess | ForEach-Object { $p = Get-Process -Id $_.OwningProcess -ErrorAction SilentlyContinue; \"$\\($_.LocalPort\\) -> PID $\\($_.OwningProcess\\) $\\($p.ProcessName\\)\" })",
+      "PowerShell(Stop-Process -Id 37300 -Force -Confirm:$false)"
     ]
   }
 }

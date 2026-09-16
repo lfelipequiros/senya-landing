@@ -97,4 +97,14 @@ export default [
     ...tsBase,
     languageOptions: { ...tsBase.languageOptions, globals: globals.node },
   },
+  {
+    // Build scripts — plain Node ESM, run by hand rather than bundled. Not part of any tsconfig,
+    // so they get the base JS rules plus Node globals rather than the TypeScript ones.
+    files: ["scripts/**/*.{js,mjs}"],
+    languageOptions: {
+      ecmaVersion: "latest",
+      sourceType: "module",
+      globals: globals.node,
+    },
+  },
 ];

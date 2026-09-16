@@ -28,3 +28,9 @@ Thumbs.db
 # EXTERNAL (installed) skill by name so a new hand-authored skill is never
 # silently dropped. Add a line per installed skill, e.g.:
 # /.claude/skills/some-installed-skill
+
+# ── Design source assets (not ours to redistribute) ───────────────────
+# Raw moodboard/placeholder sources for scripts/bake-bg.mjs — copyrighted editorial/product
+# photography (Getty, GQ, Daniel Arsham, LV/Supreme) used as a stand-in pending Q-02. The baked,
+# committed output lives in src/app/assets/bg/; this directory is local-only.
+/assets from design/
