@@ -139,6 +139,27 @@ main {
   transform-style: preserve-3d;
 }
 
+/* Holds the tap cue and the gate-form stacked in the same grid cell rather
+   than one after another. AnimatePresence keeps the exiting cue mounted
+   alongside the entering form for their crossfade, so if this were a normal
+   flow container their heights would add up for that one frame; stacked,
+   the cell is always exactly the taller of whatever's inside, mounted alone
+   or overlapping. That keeps this element's own height constant across the
+   whole tap — otherwise the centered group above it, the mark included,
+   would recenter and visibly jump. align-items: start keeps the shorter cue
+   sized to its own content instead of being stretched to fill the cell. */
+.gate-slot {
+  display: grid;
+  justify-items: center;
+  align-items: start;
+  width: 100%;
+}
+
+.gate-slot > * {
+  grid-column: 1;
+  grid-row: 1;
+}
+
 .gate-form,
 .capture-form {
   display: flex;

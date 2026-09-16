@@ -1,5 +1,5 @@
 import { useState, type FormEvent } from "react";
-import { motion, useReducedMotion } from "framer-motion";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import senyaLogo from "../assets/senya-logo.png";
 import { verifyCode } from "../verifyCode";
 import { submitLead, type LeadInput } from "../submitLead";
@@ -10,6 +10,8 @@ type CodeStatus = "idle" | "checking" | "wrong";
 
 const SPIN_SECONDS = 2.6;
 const PULSE_SECONDS = 1.4;
+const LAYOUT_EASE = [0.65, 0, 0.35, 1] as const;
+const LAYOUT_SECONDS = 0.5;
 
 // Scenes 1-3 merged into one in-place flow (scroll reveals the code field,
 // acceptance reveals the capture form) rather than separate scene changes —
@@ -23,6 +25,12 @@ export function OpeningScene() {
   const [code, setCode] = useState("");
   const [codeStatus, setCodeStatus] = useState<CodeStatus>("idle");
   const [duplicate, setDuplicate] = useState(false);
+  // The code field starts centered with the mark, same as the tap cue it
+  // replaces — it only anchors to the top once focus says a keyboard is
+  // about to cover it. Sticky rather than reverting on blur, so retyping
+  // after a wrong code doesn't yank the layout back down.
+  const [codeFieldFocused, setCodeFieldFocused] = useState(false);
+  const isTopAnchored = step === "form" || step === "done" || (step === "code" && codeFieldFocused);
 
   async function handleCodeSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
@@ -50,7 +58,8 @@ export function OpeningScene() {
       className={[
         "scene",
         "scene-opening",
-        step === "scroll" ? "scene--tappable" : "scene--top",
+        step === "scroll" ? "scene--tappable" : "",
+        isTopAnchored ? "scene--top" : "",
         step === "form" ? "scene--compact-mark" : "",
       ]
         .filter(Boolean)
@@ -61,7 +70,11 @@ export function OpeningScene() {
       // idempotent, so the two firing together is harmless.
       onClick={step === "scroll" ? () => setStep("code") : undefined}
     >
-        <div className="opening-mark">
+        <motion.div
+          className="opening-mark"
+          layout
+          transition={{ layout: { duration: prefersReducedMotion ? 0 : LAYOUT_SECONDS, ease: LAYOUT_EASE } }}
+        >
           <motion.img
             src={senyaLogo}
             alt="Senya"
@@ -75,54 +88,75 @@ export function OpeningScene() {
                 : { duration: SPIN_SECONDS, repeat: Infinity, ease: "linear" }
             }
           />
-        </div>
-        {step === "scroll" && (
-          <button type="button" className="tap-cue" onClick={() => setStep("code")}>
-            Tocá para continuar
-          </button>
-        )}
+        </motion.div>
+        {/* Grid-stacked (see .gate-slot) so the cue and the form never add
+            their heights, even while AnimatePresence overlaps them mid-exit
+            — the mark above must not move for any part of this swap. */}
+        <div className="gate-slot">
+          <AnimatePresence>
+            {step === "scroll" && (
+              <motion.button
+                type="button"
+                className="tap-cue"
+                onClick={() => setStep("code")}
+                initial={false}
+                exit={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: -8 }}
+                transition={{ duration: prefersReducedMotion ? 0.1 : 0.25, ease: "easeIn" }}
+              >
+                Tocá para continuar
+              </motion.button>
+            )}
+          </AnimatePresence>
 
-        {step === "code" && (
-          <motion.form
-            className="gate-form"
-            onSubmit={handleCodeSubmit}
-            initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: prefersReducedMotion ? 0.25 : 0.5, ease: "easeOut" }}
-          >
-            <label className="visually-hidden" htmlFor="gate-code">
-              Santo y Seña
-            </label>
-            <input
-              id="gate-code"
-              name="code"
-              type="text"
-              inputMode="text"
-              autoComplete="off"
-              autoCapitalize="none"
-              autoCorrect="off"
-              spellCheck={false}
-              enterKeyHint="go"
-              placeholder="Santo y Seña"
-              value={code}
-              aria-invalid={codeStatus === "wrong"}
-              aria-describedby="gate-error"
-              onChange={(event) => {
-                setCode(event.target.value);
-                setCodeStatus("idle");
+          {step === "code" && (
+            <motion.form
+              className="gate-form"
+              layout
+              onSubmit={handleCodeSubmit}
+              initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
+              animate={{ opacity: 1, y: 0 }}
+              transition={{
+                duration: prefersReducedMotion ? 0.25 : 0.35,
+                ease: "easeOut",
+                delay: prefersReducedMotion ? 0 : 0.15,
+                layout: { duration: prefersReducedMotion ? 0 : LAYOUT_SECONDS, ease: LAYOUT_EASE },
               }}
-            />
-            <button type="submit" disabled={codeStatus === "checking" || code.length === 0}>
-              ENTRAR
-            </button>
-            {/* Always mounted, always occupies its line: the message must not
-                shift the form when it appears, and an aria-live region only
-                announces reliably if it was in the DOM beforehand. */}
-            <p className="gate-wrong" id="gate-error" role="alert">
-              {codeStatus === "wrong" ? "Incorrecto" : ""}
-            </p>
-          </motion.form>
-        )}
+            >
+              <label className="visually-hidden" htmlFor="gate-code">
+                Santo y Seña
+              </label>
+              <input
+                id="gate-code"
+                name="code"
+                type="text"
+                inputMode="text"
+                autoComplete="off"
+                autoCapitalize="none"
+                autoCorrect="off"
+                spellCheck={false}
+                enterKeyHint="go"
+                placeholder="Santo y Seña"
+                value={code}
+                aria-invalid={codeStatus === "wrong"}
+                aria-describedby="gate-error"
+                onChange={(event) => {
+                  setCode(event.target.value);
+                  setCodeStatus("idle");
+                }}
+                onFocus={() => setCodeFieldFocused(true)}
+              />
+              <button type="submit" disabled={codeStatus === "checking" || code.length === 0}>
+                ENTRAR
+              </button>
+              {/* Always mounted, always occupies its line: the message must not
+                  shift the form when it appears, and an aria-live region only
+                  announces reliably if it was in the DOM beforehand. */}
+              <p className="gate-wrong" id="gate-error" role="alert">
+                {codeStatus === "wrong" ? "Incorrecto" : ""}
+              </p>
+            </motion.form>
+          )}
+        </div>
 
         {step === "form" && (
           <motion.div
