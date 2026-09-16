@@ -33,6 +33,16 @@ function normalizeEmail(email: string): string {
   return email.trim().toLowerCase();
 }
 
+// Diagnostic-only: a gaxios/Sheets-API error's raw object can carry the request body and the bearer
+// token (in `.config.data` / `.config.headers`) — never log it directly (invariants #1 and #3). Only
+// the HTTP status and the API's own message (which describes the failure, not the submitted data) are
+// safe to surface.
+function describeError(error: unknown): string {
+  const status = (error as { response?: { status?: number } })?.response?.status;
+  const message = error instanceof Error ? error.message : String(error);
+  return status ? `${status}: ${message}` : message;
+}
+
 function rowToLead(row: string[]): Lead {
   const [id, name, email, phone, locale, createdAt] = row;
   return {
@@ -82,8 +92,9 @@ export class GoogleSheetsLeadsRepository implements LeadsRepository {
       const rows = response.data.values ?? [];
       const match = rows.map(rowToLead).find((lead) => normalizeEmail(lead.email) === target);
       return ok(match ?? null);
-    } catch {
-      // Invariant #3: never log the email being looked up, only that the read failed.
+    } catch (error) {
+      // Invariant #3: never log the email being looked up, only that the read failed and why.
+      console.error("[leads] sheet read failed:", describeError(error));
       return err("leads: failed to read the sheet");
     }
   }
@@ -110,7 +121,8 @@ export class GoogleSheetsLeadsRepository implements LeadsRepository {
         data: { values: [[lead.id, lead.name, lead.email, lead.phone, lead.locale, lead.createdAt]] },
       });
       return ok({ lead, duplicate: false });
-    } catch {
+    } catch (error) {
+      console.error("[leads] sheet write failed:", describeError(error));
       return err("leads: failed to write to the sheet");
     }
   }
