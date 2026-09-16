@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type SyntheticEvent } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useAnimationFrame, useReducedMotion } from "framer-motion";
 import {
   BURST_FRAMES,
@@ -76,6 +76,19 @@ function collectFrames(): Frame[] {
 
 const FRAMES = collectFrames();
 
+/**
+ * How long any one image gets to arrive and decode before the burst gives up on it.
+ *
+ * Generous on purpose — the point is to absorb a slow connection, not to race it. A frame that
+ * misses the deadline is dropped from the burst exactly like one that errored, and the burst plays
+ * with whatever is left rather than holding coral forever on a frame that is never coming.
+ */
+const PATIENCE_MS = 10_000;
+
+const EMPTY_POSITIONS: number[] = [];
+/** Per-burst load results: `ok` is what can be shown, `resolved` counts those plus the skipped. */
+const EMPTY_LOADS = { of: EMPTY_POSITIONS, ok: EMPTY_POSITIONS, resolved: 0 };
+
 interface BackgroundCycleProps {
   /**
    * Whether the cycle is running. Goes false at the capture form and stays false — the surface
@@ -102,35 +115,99 @@ export function BackgroundCycle({ active }: BackgroundCycleProps) {
   const startRef = useRef<number | null>(null);
   const slotRef = useRef<number | null>(null);
   const readyRef = useRef(false);
-  const loadedRef = useRef(0);
   // The burst after this one, drawn once and then warmed. Held so the warm and the swap use the
   // same draw — drawing separately would consume the sequencer twice per cycle, which both doubles
   // the fetching and breaks the guarantee that every image shows once per pass.
   const nextRef = useRef<number[] | null>(null);
 
-  const [ready, setReady] = useState(false);
-  readyRef.current = ready;
+  // This burst's load results, by position rather than by element, so a frame that reports twice —
+  // a cached image is already `complete` when the ref lands and then fires `load` anyway — counts
+  // once. `resolved` is every position that has finished one way or the other; `ok` is the subset
+  // that decoded and can actually be shown.
+  const resolvedRef = useRef<Set<number>>(new Set());
+  const okRef = useRef<Set<number>>(new Set());
+  // Bumped per burst, and part of every frame's key. Two consecutive bursts can hold the same image
+  // at the same position, and without this they would share a key — React would then keep the one
+  // <img> with an unchanged src, which fires no `load`, so the burst could never report ready and
+  // the cycle stalled on its first frame. (Unreachable for the first three bursts: 21 images taken
+  // 7 at a time is one clean pass, so the earliest repeat is the fourth.)
+  const passRef = useRef(0);
+  const trackedRef = useRef(burst);
+  if (trackedRef.current !== burst) {
+    trackedRef.current = burst;
+    passRef.current += 1;
+    resolvedRef.current = new Set();
+    okRef.current = new Set();
+  }
+  const pass = passRef.current;
 
-  // A fresh burst is unloaded until its images say otherwise.
-  useEffect(() => {
-    loadedRef.current = 0;
-    setReady(false);
-  }, [burst]);
+  // Tagged with the burst they belong to, so a new burst starts unloaded by construction rather
+  // than via an effect that would land after its frames had already reported.
+  const [loads, setLoads] = useState(EMPTY_LOADS);
+  const mine = loads.of === burst;
+  /** Positions that decoded, in order — the only frames the burst will show. */
+  const playable = mine ? loads.ok : EMPTY_POSITIONS;
+  const resolved = mine ? loads.resolved : 0;
 
-  const settle = useCallback(() => {
-    loadedRef.current += 1;
-    if (loadedRef.current >= burst.length) setReady(true);
-  }, [burst.length]);
+  const publish = useCallback((of: number[]) => {
+    setLoads({
+      of,
+      ok: [...okRef.current].sort((a, b) => a - b),
+      resolved: resolvedRef.current.size,
+    });
+  }, []);
 
-  const onFrameLoad = useCallback(
-    (event: SyntheticEvent<HTMLImageElement>) => {
-      // `load` only promises the bytes arrived; decoding still happens on first paint and would
-      // hitch mid-burst. decode() moves that work here, into the coral hold. Settle on rejection
-      // too — a frame that will not decode should cost one blank slot, not freeze the cycle.
-      event.currentTarget.decode().then(settle, settle);
+  /** Record one frame's outcome. `usable: false` drops it from the burst rather than blanking it. */
+  const resolve = useCallback(
+    (position: number, usable: boolean) => {
+      // A decode from a burst that has already been swapped out resolves against a DOM node nobody
+      // is showing; letting it through would credit this burst for a frame it does not have.
+      if (trackedRef.current !== burst) return;
+      if (resolvedRef.current.has(position)) return;
+      resolvedRef.current.add(position);
+      if (usable) okRef.current.add(position);
+      publish(burst);
     },
-    [settle],
+    [burst, publish],
   );
+
+  const resolveAfterDecode = useCallback(
+    (img: HTMLImageElement, position: number) => {
+      // `load` only promises the bytes arrived; decoding still happens on first paint and would
+      // hitch mid-burst. decode() moves that work here, into the coral hold — and a frame that will
+      // not decode is dropped, since showing it would paint a blank slot mid-burst.
+      img.decode().then(
+        () => resolve(position, true),
+        () => resolve(position, false),
+      );
+    },
+    [resolve],
+  );
+
+  // Every frame in a burst mounts at the same moment, so one sweep at the deadline is per-image:
+  // anything still pending has had the full PATIENCE_MS to itself. Those are dropped exactly like
+  // an error, and the burst runs on what is left — a short burst is still the choreography, where a
+  // permanent coral hold reads as a broken page. If nothing survived, `playable` is empty, the
+  // surface stays coral for this whole cycle (the PHOTO_BG_ON=off experience) and the next burst
+  // gets its own try, so a passing network blip heals itself.
+  useEffect(() => {
+    const timer = window.setTimeout(() => {
+      let dropped = false;
+      for (let position = 0; position < burst.length; position += 1) {
+        if (resolvedRef.current.has(position)) continue;
+        resolvedRef.current.add(position);
+        dropped = true;
+      }
+      if (dropped) publish(burst);
+    }, PATIENCE_MS);
+    return () => window.clearTimeout(timer);
+  }, [burst, publish]);
+
+  // Ready once every frame has resolved — decoded or given up on. Not "once `ok` is full": a burst
+  // that lost a frame would then hold the lead forever, which is the stall this gate exists to
+  // prevent.
+  const ready = resolved >= burst.length;
+  readyRef.current = ready;
 
   useAnimationFrame((time) => {
     if (!active || burst.length === 0) return;
@@ -140,10 +217,11 @@ export function BackgroundCycle({ active }: BackgroundCycleProps) {
     const lead = burstStart(reduced);
     let elapsed = time - startRef.current;
 
-    // Never start a burst half-loaded: hold the last moment of the coral lead until every image in
-    // this burst has decoded. A burst that flashes empty frames reads as a broken page, and the
-    // lead exists precisely to cover this.
-    if (elapsed >= lead && !readyRef.current) {
+    // Never start a burst half-loaded: hold the last moment of the coral lead until this burst's
+    // images have decoded. A burst that flashes empty frames reads as a broken page, and the lead
+    // exists precisely to cover this.
+    const holding = elapsed >= lead && !readyRef.current;
+    if (holding) {
       startRef.current = time - lead;
       elapsed = lead;
     }
@@ -156,12 +234,21 @@ export function BackgroundCycle({ active }: BackgroundCycleProps) {
       setBurst(upcoming);
     }
 
-    const phase = frameAt(elapsed, reduced);
-    // Wrap the slot into whatever the burst actually holds. The schedule always emits
-    // BURST_FRAMES slots, but a library smaller than that (or one shrunk by sources the bake
-    // rejected) yields a shorter burst — without the wrap those slots would match no frame and the
-    // burst would flash blank coral in the middle of itself.
-    const next = phase.phase === "image" ? phase.slot % burst.length : null;
+    // While holding, show coral rather than what the schedule says. `frameAt(lead)` is the burst's
+    // first image, so reading the schedule here would park a still photograph on screen for the
+    // whole wait instead of the hold the wait exists to extend.
+    let next: number | null = null;
+    if (!holding) {
+      const phase = frameAt(elapsed, reduced);
+      // Walk the frames that actually decoded, wrapping so every slot the schedule emits lands on a
+      // real one. The schedule always emits BURST_FRAMES slots, but the burst can be shorter — a
+      // library smaller than a burst, sources the bake rejected, or frames a slow connection has
+      // not delivered — and without the wrap those slots would flash blank mid-burst.
+      if (phase.phase === "image" && playable.length > 0) {
+        next = playable[phase.slot % playable.length] ?? null;
+      }
+    }
+
     // The frame loop runs at 60fps; the background changes 3 times a second. Only re-render when
     // the visible frame actually changes.
     if (next !== slotRef.current) {
@@ -201,20 +288,31 @@ export function BackgroundCycle({ active }: BackgroundCycleProps) {
         if (!frame) return null;
         return (
           <div
-            key={`${frame.slug}-${position}`}
+            key={`${pass}-${position}`}
             className="bg-frame"
             data-shown={slot === position ? "" : undefined}
           >
             <picture>
               {frame.avif && <source type="image/avif" srcSet={frame.avif} sizes="100vw" />}
               <img
+                // A warmed image can already be complete by the time the ref lands, in which case
+                // `load` fired before React attached the handler and will never fire again. Without
+                // this the tail's own prefetch — which exists to make exactly that happen — would
+                // be what stalls the next burst.
+                ref={(img) => {
+                  if (!img?.complete) return;
+                  // naturalWidth 0 on a complete image means it failed before React could attach
+                  // the error handler — resolved, but not usable.
+                  if (img.naturalWidth === 0) resolve(position, false);
+                  else resolveAfterDecode(img, position);
+                }}
                 src={frame.fallback}
                 srcSet={frame.webp}
                 sizes="100vw"
                 alt=""
                 decoding="async"
-                onLoad={onFrameLoad}
-                onError={settle}
+                onLoad={(event) => resolveAfterDecode(event.currentTarget, position)}
+                onError={() => resolve(position, false)}
               />
             </picture>
           </div>
