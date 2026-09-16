@@ -1,5 +1,8 @@
 :root {
   color-scheme: dark;
+  --senya-coral: #e31b48;
+  --senya-opening-bg: #db3d4f;
+  --senya-ink: #171717;
 }
 
 * {
@@ -14,11 +17,115 @@ body,
 }
 
 body {
-  font-family:
-    system-ui,
-    -apple-system,
-    "Segoe UI",
-    sans-serif;
+  font-family: "Roboto Mono", ui-monospace, monospace;
   background: #0a0a0a;
   color: #f5f5f5;
+}
+
+.scene {
+  min-height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 1rem;
+  padding: 2rem;
+  text-align: center;
+}
+
+.scroll-cue {
+  opacity: 0.6;
+  font-size: 0.9rem;
+}
+
+/* First real brand color (from design): coral background with the black mark,
+   scoped to the opening for now rather than the whole dark theme — the other
+   scenes are still placeholder fidelity and get dressed together in S3.
+   --senya-opening-bg is a touch darker than --senya-coral to compensate for
+   the multiply-blended grain lightening the perceived color; --senya-coral
+   itself stays the true brand value for everything else (button ink, etc).
+   The grain is procedural (SVG feTurbulence, no image request) since design
+   hasn't shipped a real paper texture yet — swap the background-image for a
+   scanned asset later without touching markup if one arrives. */
+.scene-opening {
+  background-color: var(--senya-opening-bg);
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
+  background-size: 200px 200px;
+  background-blend-mode: multiply;
+  color: var(--senya-ink);
+}
+
+.opening-mark {
+  width: clamp(120px, 28vw, 220px);
+  perspective: 900px;
+}
+
+.opening-logo {
+  display: block;
+  width: 100%;
+  height: auto;
+  transform-style: preserve-3d;
+}
+
+.gate-form {
+  display: flex;
+  gap: 0.5rem;
+  flex-wrap: wrap;
+  justify-content: center;
+}
+
+.capture-form {
+  display: flex;
+  flex-direction: column;
+  gap: 0.75rem;
+  width: min(320px, 100%);
+  text-align: left;
+}
+
+.capture-field {
+  display: flex;
+  flex-direction: column;
+  gap: 0.3rem;
+}
+
+.gate-form input,
+.capture-field input {
+  font-family: inherit;
+  padding: 0.6rem 0.8rem;
+  border: 1px solid var(--senya-ink);
+  border-radius: 4px;
+  background: transparent;
+  color: var(--senya-ink);
+}
+
+.gate-form input::placeholder,
+.capture-field input::placeholder {
+  color: color-mix(in srgb, var(--senya-ink) 60%, transparent);
+}
+
+.gate-form button,
+.capture-form button {
+  font-family: inherit;
+  padding: 0.6rem 1.2rem;
+  border: 1px solid var(--senya-ink);
+  border-radius: 4px;
+  background: var(--senya-ink);
+  color: var(--senya-coral);
+  cursor: pointer;
+}
+
+.gate-form button:disabled,
+.capture-form button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.gate-wrong,
+.field-error {
+  color: #b3001b;
+}
+
+.field-error {
+  margin: 0;
+  font-size: 0.8rem;
 }

@@ -4,6 +4,7 @@
   "type": "module",
   "scripts": {
     "dev": "vite",
+    "dev:vercel": "vercel dev",
     "build": "npm run typecheck && vite build",
     "preview": "vite preview",
     "typecheck": "tsc -p tsconfig.app.json --noEmit && tsc -p tsconfig.server.json --noEmit && tsc -p tsconfig.node.json --noEmit",
@@ -12,19 +13,24 @@
     "test": "vitest run"
   },
   "dependencies": {
+    "@fontsource/roboto-mono": "^5.3.0",
+    "framer-motion": "^11.11.9",
+    "google-auth-library": "^9.14.2",
     "react": "^18.3.1",
     "react-dom": "^18.3.1",
-    "framer-motion": "^11.11.9",
-    "zod": "^3.23.8",
-    "@supabase/supabase-js": "^2.45.4"
+    "zod": "^3.23.8"
   },
   "devDependencies": {
+    "@eslint/js": "^9.12.0",
+    "@testing-library/jest-dom": "^6.5.0",
+    "@testing-library/react": "^16.0.1",
+    "@types/node": "^22.7.5",
     "@types/react": "^18.3.11",
     "@types/react-dom": "^18.3.0",
-    "@types/node": "^22.7.5",
-    "@eslint/js": "^9.12.0",
+    "@types/testing-library__jest-dom": "^5.14.9",
     "@typescript-eslint/eslint-plugin": "^8.8.1",
     "@typescript-eslint/parser": "^8.8.1",
+    "@vercel/node": "^13.0.1",
     "@vitejs/plugin-react": "^4.3.2",
     "@vitest/coverage-v8": "^2.1.2",
     "eslint": "^9.12.0",
@@ -35,9 +41,6 @@
     "prettier": "^3.3.3",
     "typescript": "^5.6.3",
     "vite": "^5.4.8",
-    "vitest": "^2.1.2",
-    "@testing-library/react": "^16.0.1",
-    "@testing-library/jest-dom": "^6.5.0",
-    "@types/testing-library__jest-dom": "^5.14.9"
+    "vitest": "^2.1.2"
   }
 }

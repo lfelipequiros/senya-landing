@@ -1,7 +1,9 @@
+import { OpeningScene } from "./scenes/OpeningScene";
+
 export function App() {
   return (
     <main>
-      <h1>Senya</h1>
+      <OpeningScene />
     </main>
   );
 }

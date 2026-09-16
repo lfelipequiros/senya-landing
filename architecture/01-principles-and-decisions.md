@@ -49,7 +49,7 @@ scenes 1–2 are URL-reachable per PDR-002, and there's exactly one route). Gove
 needed, that's a fresh decision, not an extension of this one.
 
 ### ADR-003 — Supabase Postgres as the data store; a single `LeadsRepository` seam
-**Status:** accepted
+**Status:** superseded by ADR-007
 **Context.** One entity (`leads`), one write path, one dedupe rule (unique email), and the owner
 explicitly chose no admin surface (S2) — reading the list has to happen *somewhere* without building
 one. Options weighed: (a) a bespoke Postgres instance + a hand-rolled admin view — most control, most
@@ -71,6 +71,39 @@ later change is checked against (CLAUDE.md invariant #2).
 Swapping the store later means writing one new class, not touching call sites. Email uniqueness is
 enforced at the database level, not only in application code, closing the double-submit concurrency
 gap as a resolved edge case.
+
+### ADR-007 — Google Sheets as the data store, via a service account; supersedes ADR-003
+**Status:** accepted
+**Context.** The owner asked to reconsider the store after ADR-003 shipped: he wants to open the list
+in a spreadsheet directly, and would rather not run a Supabase project for one table. ADR-003 already
+weighed and rejected a spreadsheet-backed store for lacking a real uniqueness constraint — that
+tradeoff is unchanged; the owner accepted it explicitly, given the product's low, pre-launch volume
+(one shared code, not open signup). Two ways to write to a Sheet server-side were weighed: (a) a
+public Apps Script Web App endpoint guarded by a shared secret — no GCP project needed, but the write
+path is a bearer-token-guarded public URL, which sits uneasily next to invariant #1; (b) **a Google
+service account authenticated via `google-auth-library`, calling the Sheets API v4 directly** — a real
+server-to-server credential that never reaches a public endpoint, at the cost of a one-time GCP
+service-account setup. (b) was chosen for the same reason ADR-004 chose a server-side code check over
+a cheaper client-side one: this is a place a shortcut would visibly contradict the project's own
+security posture.
+**Decision.** The `leads` data model (schema in [`00-overview.md`](00-overview.md)) is now one Google
+Sheet, one tab, one header row, written through a Google service account. The seam is unchanged in
+shape: `src/server/data/leadsRepository.ts` is still the only file that may hold Sheets-API
+credentials or call the Sheets API, still exposes `LeadsRepository` (`create`, `findByEmail`, both
+returning `Result<T>`), and still ships an `InMemoryLeadsRepository` for tests. Only the concrete
+implementation changes: `GoogleSheetsLeadsRepository` replaces `SupabaseLeadsRepository`. Credentials
+(`GOOGLE_SERVICE_ACCOUNT_EMAIL`, `GOOGLE_PRIVATE_KEY`, `GOOGLE_SHEETS_SPREADSHEET_ID`) are server-only
+env vars, documented in `.env.example`, exactly as `SUPABASE_*` was.
+**Consequence.** The uniqueness rule on email (PDR-002, S2's acceptance criteria) can no longer be
+enforced **at the store** — a Sheet has no unique-constraint mechanism. `GoogleSheetsLeadsRepository`
+enforces it in application code instead: `create` reads the email column and checks for a match before
+appending. This is a real, named regression from ADR-003's guarantee: two truly concurrent submissions
+of the same email can both land, whereas Postgres's constraint made that impossible. Accepted as a
+low-probability risk at this product's scale (a single access code, not public signup), not silently
+dropped — if concurrent double-submits are ever observed in the sheet, that is the trigger to move back
+to a real database, not to add a locking layer here. The owner's own table view is now literally the
+"retrieve and export the list" capability S2 asks for, at zero build cost — the same ROI ADR-003 was
+chosen for, now delivered by a spreadsheet instead of Supabase's table editor.
 
 ### ADR-004 — The access code is verified server-side; it never ships to the client
 **Status:** accepted
