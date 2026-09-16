@@ -85,6 +85,30 @@ const FRAMES = collectFrames();
  */
 const PATIENCE_MS = 10_000;
 
+/**
+ * Whether the browser will take the AVIF `<source>`, probed once with a 1x1 image.
+ *
+ * The prefetch below has to warm the same format `<picture>` will pick, and `new Image()` has no
+ * `<source type>` negotiation of its own. Warming the wrong one is worse than not warming at all:
+ * it downloads a file nothing ever displays *and* leaves the file that will be displayed cold, so
+ * every frame costs both formats. A failed probe resolves false and warms WebP, which every
+ * browser that reaches this code can read.
+ */
+const AVIF_PROBE =
+  "data:image/avif;base64,AAAAHGZ0eXBhdmlmAAAAAG1pZjFhdmlmbWlhZgAAANZtZXRhAAAAAAAAACFoZGxyAAAAAAAAAABwaWN0AAAAAAAAAAAAAAAAAAAAACJpbG9jAAAAAERAAAEAAQAAAAAA+gABAAAAAAAAAB4AAAAjaWluZgAAAAAAAQAAABVpbmZlAgAAAAABAABhdjAxAAAAAA5waXRtAAAAAAABAAAAVmlwcnAAAAA4aXBjbwAAAAxhdjFDgSACAAAAABRpc3BlAAAAAAAAAAEAAAABAAAAEHBpeGkAAAAAAwgICAAAABZpcG1hAAAAAAAAAAEAAQOBAgMAAAAmbWRhdBIACgc4AAaQENBpMhEf8mKE7///8WfgAJA1jjx+3A==";
+
+let avifSupport: Promise<boolean> | null = null;
+
+function supportsAvif(): Promise<boolean> {
+  avifSupport ??= new Promise<boolean>((resolve) => {
+    const probe = new Image();
+    probe.onload = () => resolve(probe.width > 0 && probe.height > 0);
+    probe.onerror = () => resolve(false);
+    probe.src = AVIF_PROBE;
+  });
+  return avifSupport;
+}
+
 const EMPTY_POSITIONS: number[] = [];
 /** Per-burst load results: `ok` is what can be shown, `resolved` counts those plus the skipped. */
 const EMPTY_LOADS = { of: EMPTY_POSITIONS, ok: EMPTY_POSITIONS, resolved: 0 };
@@ -266,13 +290,18 @@ export function BackgroundCycle({ active }: BackgroundCycleProps) {
       () => {
         const upcoming = nextRef.current ?? draw();
         nextRef.current = upcoming;
-        for (const index of upcoming) {
-          const frame = FRAMES[index];
-          if (!frame) continue;
-          const warm = new Image();
-          warm.sizes = "100vw";
-          warm.srcset = frame.webp;
-        }
+        void supportsAvif().then((avif) => {
+          // Still the burst we warmed for? The probe resolves from cache after the first call, but
+          // the first is a real decode and the cycle may have moved on.
+          if (nextRef.current !== upcoming) return;
+          for (const index of upcoming) {
+            const frame = FRAMES[index];
+            if (!frame) continue;
+            const warm = new Image();
+            warm.sizes = "100vw";
+            warm.srcset = avif && frame.avif ? frame.avif : frame.webp;
+          }
+        });
       },
       shape.lead + shape.frame * BURST_FRAMES,
     );
