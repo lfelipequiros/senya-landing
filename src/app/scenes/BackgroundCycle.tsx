@@ -281,6 +281,17 @@ export function BackgroundCycle({ active }: BackgroundCycleProps) {
     }
   });
 
+  // Leaving the cycle has to CLEAR the visible frame, not merely stop advancing it. The animation
+  // frame returns early once `active` is false, so without this whatever photograph happened to be
+  // on screen at that moment keeps its opacity forever — and since the burst occupies about a third
+  // of the cycle, roughly one run in three would park an arbitrary image permanently behind the
+  // capture form. The agreed behaviour there is still coral.
+  useEffect(() => {
+    if (active) return;
+    slotRef.current = null;
+    setSlot(null);
+  }, [active]);
+
   // Warm the next burst during the tail hold, so its images are already in cache when they mount
   // and the decode gate above has nothing left to wait for. The tail exists for exactly this.
   useEffect(() => {
@@ -329,7 +340,11 @@ export function BackgroundCycle({ active }: BackgroundCycleProps) {
                 // this the tail's own prefetch — which exists to make exactly that happen — would
                 // be what stalls the next burst.
                 ref={(img) => {
-                  if (!img?.complete) return;
+                  // React re-invokes an inline ref on every render (null, then the node), and a
+                  // running burst re-renders three times a second. Without the resolved check that
+                  // is seven fresh decode() calls per re-render for frames that already settled —
+                  // ~21 a second of promise churn during the one stretch where frame rate matters.
+                  if (!img?.complete || resolvedRef.current.has(position)) return;
                   // naturalWidth 0 on a complete image means it failed before React could attach
                   // the error handler — resolved, but not usable.
                   if (img.naturalWidth === 0) resolve(position, false);
