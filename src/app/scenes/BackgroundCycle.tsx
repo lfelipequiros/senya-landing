@@ -13,7 +13,8 @@ import {
 // widths and two formats is 84 imports nobody should maintain by hand. Vite resolves these to
 // hashed URLs at build time, and because this module is only ever reached through a lazy import
 // behind PHOTO_BG_ON, an off build never pulls any of them into the bundle.
-const assets = import.meta.glob("../assets/bg/*.{avif,webp}", {
+// `@bg` is aliased in vite.config.ts: assets/bg, or assets/bg-bw when PHOTO_BG_BW=true.
+const assets = import.meta.glob("@bg/*.{avif,webp}", {
   eager: true,
   query: "?url",
   import: "default",
