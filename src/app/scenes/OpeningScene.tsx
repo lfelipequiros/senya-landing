@@ -72,23 +72,14 @@ export function OpeningScene() {
         />
       </div>
       <h1>SENYA</h1>
-
       {step === "scroll" && (
         <>
-          <p>
-            Una colección que todavía no existe en ninguna tienda. Vas a ser de los primeros en
-            verla — pero primero, hay que ganárselo.
-          </p>
           <p className="scroll-cue">Desliza para continuar ↓</p>
         </>
       )}
 
       {step === "code" && (
         <>
-          <p>
-            Una colección que todavía no existe en ninguna tienda. Vas a ser de los primeros en
-            verla — pero primero, hay que ganárselo.
-          </p>
           <motion.form
             className="gate-form"
             onSubmit={handleCodeSubmit}
@@ -103,7 +94,7 @@ export function OpeningScene() {
               autoCapitalize="none"
               autoCorrect="off"
               spellCheck={false}
-              placeholder="Código de acceso"
+              placeholder="Santo y Seña"
               value={code}
               onChange={(event) => {
                 setCode(event.target.value);
@@ -137,8 +128,8 @@ export function OpeningScene() {
       {step === "done" && (
         <p>
           {duplicate
-            ? "Ya estabas en la lista — no hace falta hacer nada más. Te avisamos por WhatsApp o email apenas abrimos."
-            : "Ya estás en la lista. Te avisamos por WhatsApp o email apenas abrimos."}
+            ? "YA ESTABAS EN LISTA. LAS SEÑALES SERÁN CLARAS"
+            : "BIENVENIDO, HAS SIDO REGISTRADO, LAS SEÑALES SERÁN CLARAS"}
         </p>
       )}
     </section>
