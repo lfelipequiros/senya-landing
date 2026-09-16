@@ -35,46 +35,48 @@ writes one thing — a lead — through one narrow server boundary into one tabl
                              │  Result<T>  (ADR-003 seam contract)
                              ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Data seam — src/server/data/leadsRepository.ts (ADR-003)     │
+│  Data seam — src/server/data/leadsRepository.ts (ADR-007)     │
 │  ─ LeadsRepository interface: create, findByEmail             │
-│  ─ SupabaseLeadsRepository (prod) · InMemoryLeadsRepository    │
+│  ─ GoogleSheetsLeadsRepository (prod) · InMemoryLeadsRepository│
 │    (tests/fixture)                                             │
 └───────────────────────────┬───────────────────────────────────┘
                              ▼
 ┌─────────────────────────────────────────────────────────────┐
-│  Supabase Postgres (ADR-003) — one table: `leads`              │
+│  Google Sheets, via a service account (ADR-007) — one tab      │
 └─────────────────────────────────────────────────────────────┘
 ```
 
-**The seam** (ADR-003): everything above `leadsRepository.ts` talks to leads only through the
-`LeadsRepository` interface — never a raw Supabase client, never a raw SQL string outside that one
-file. Everything above the two API routes never sees the access code or the Supabase service key —
-both are server-only. These two boundaries are what the gates protect (tech-planning's alignment
-checklist, tech-build's invariants, tech-qa's compliance review all cite them by name).
+**The seam** (ADR-007, superseding ADR-003): everything above `leadsRepository.ts` talks to leads only
+through the `LeadsRepository` interface — never a raw Sheets-API call outside that one file. Everything
+above the two API routes never sees the access code or the Sheets service-account key — both are
+server-only. These two boundaries are what the gates protect (tech-planning's alignment checklist,
+tech-build's invariants, tech-qa's compliance review all cite them by name).
 
 ## Core data model
 
-One table. Single-tenant, so no tenant key is needed anywhere in this schema (ADR-005) — this is a
-deliberate, named exception to a multi-tenant default, not an oversight.
+One sheet tab, one header row. Single-tenant, so no tenant key is needed anywhere in this schema
+(ADR-005) — this is a deliberate, named exception to a multi-tenant default, not an oversight.
 
 ```
-leads
-  id            uuid            primary key, default gen_random_uuid()
-  name          text            not null
-  email         text            not null, unique  -- the duplicate-detection key (PDR-002 / 02.7)
-  phone         text            not null
-  locale        text            not null          -- 'es' | 'en' — which language they used (PDR-004)
-  created_at    timestamptz     not null, default now()
+Leads (columns, in order)
+  id            text (uuid)     generated server-side (crypto.randomUUID())
+  name          text
+  email         text            the duplicate-detection key (PDR-002 / 02.7) — checked in application
+                                 code, not at the store (ADR-007's named tradeoff vs. ADR-003)
+  phone         text
+  locale        text            'es' | 'en' — which language they used (PDR-004)
+  created_at    text (ISO 8601)
 ```
 
-`email` carries the uniqueness constraint at the database level (ADR-003) — the duplicate check must
-hold even under a concurrent double-submit, not only in application code (02.7's resolved edge case).
+`email` uniqueness is enforced by `GoogleSheetsLeadsRepository.create` reading the column before
+appending (ADR-007) — a best-effort check, not a database constraint. A genuinely concurrent
+double-submit of the same email can both land; accepted as a low-probability risk at this product's
+scale (02.7's resolved edge case, re-scoped by ADR-007).
 
 ## What this architecture deliberately does *not* include (yet)
 
-- **No admin/read UI** — the owner reads the list directly in Supabase's own table editor. Trigger to
-  add one: the owner needs to act on the list from a phone with no laptop access, or needs filtering/
-  export Supabase's UI doesn't offer.
+- **No admin/read UI** — the owner reads the list directly in the Google Sheet. Trigger to add one:
+  the owner needs filtering/export the Sheet's own UI doesn't offer.
 - **No queue, cache, or streaming** — one write path, low volume, no fan-out. Trigger: sustained
   traffic that makes a single serverless function invocation per submission insufficient (not expected
   at this product's scale).
@@ -92,7 +94,7 @@ hold even under a concurrent double-submit, not only in application code (02.7's
 ## Cross-cutting concerns
 
 - **Identity & access.** No user accounts. The only access-control surface is the shared code, verified
-  server-side (ADR-004); Supabase access uses a service-role key that never reaches the client.
+  server-side (ADR-004); Sheets access uses a service-account key that never reaches the client.
 - **Observability.** Structured, prefixed console logs only (`[leads]`, `[verify-code]`) at this scale
   — Vercel's function logs are the only sink. No dedicated logging service until volume or an incident
   justifies one (stage-gated, CLAUDE.md §4).

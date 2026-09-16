@@ -41,7 +41,7 @@ Anything that does neither waits.
 - **Hosting:** Vercel — static frontend plus two serverless API routes.
 - **Frontend:** Vite + React + TypeScript (strict), Framer Motion for all motion.
 - **Backend:** two serverless functions — `/api/verify-code`, `/api/leads`. No backend framework.
-- **Data:** Supabase Postgres, one table (`leads`).
+- **Data:** Google Sheets, one tab (`Leads`), written via a Google service account (ADR-007).
 - **AI:** none.
 
 Diagram and schema: [`architecture/00-overview.md`](architecture/00-overview.md). Decisions already
@@ -54,9 +54,9 @@ taken: [`architecture/01-principles-and-decisions.md`](architecture/01-principle
 
 Non-negotiable. Everything else is a judgment call you can make yourself.
 
-1. **The access code and the Supabase service key never reach the client.** No debug bypass in
-   shipped code.
-2. **No raw Supabase client or SQL outside `src/server/data/leadsRepository.ts`.**
+1. **The access code and the Google service-account credentials never reach the client.** No debug
+   bypass in shipped code.
+2. **No raw Google Sheets API client outside `src/server/data/leadsRepository.ts`.**
 3. **No name, email, phone, or access code in logs or error messages**, at any level.
 4. **`zod` validates both API request bodies** before anything touches the seam.
 5. **A failed capture fails loudly** — never a success screen over a lost lead, and never a silent

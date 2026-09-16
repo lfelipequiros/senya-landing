@@ -21,15 +21,18 @@ behaves the way it does. This file is only *what's left to do*.
 
 ## F — Foundation
 
-One table, two secrets, one repository file, one CI workflow. An afternoon.
+One sheet, two secrets, one repository file, one CI workflow. An afternoon.
 
-- [ ] A `leads` table exists: name, email, phone, created_at. Uniqueness on **normalized** email
-      (lowercased, trimmed) enforced **at the store**, not in application logic.
-- [ ] The migration is committed and re-runnable from scratch.
-- [ ] `src/server/data/leadsRepository.ts` is the only file that imports Supabase. Every method
-      returns `Result<T>` and never throws across that boundary.
-- [ ] The access code and the Supabase service key are read from env, server-side only. Neither
-      appears in client source or in any bundle.
+- [ ] The `Leads` sheet tab exists with its header row: id, name, email, phone, locale, created_at.
+      Uniqueness on **normalized** email (lowercased, trimmed) is enforced in
+      `GoogleSheetsLeadsRepository` — a best-effort application-level check, not a store constraint
+      (ADR-007's named tradeoff for dropping Supabase).
+- [ ] The service account exists, the Sheets API is enabled, and the sheet is shared with the service
+      account's email (Editor access) — documented as setup steps in `.env.example`.
+- [ ] `src/server/data/leadsRepository.ts` is the only file that calls the Google Sheets API. Every
+      method returns `Result<T>` and never throws across that boundary.
+- [ ] The access code and the Google service-account credentials are read from env, server-side only.
+      Neither appears in client source or in any bundle.
 - [ ] CI runs typecheck, lint, test, and build on push.
 
 **Note.** Q-03 blocks the real access code. Wire the env var correctly with a placeholder value and
@@ -122,8 +125,10 @@ and unnoticeable.
 - [ ] The same email again produces no second entry and reports "already listed" to the flow, which
       plays scene 4's already-listed ending.
 - [ ] Casing and whitespace differences in an email do not create a duplicate.
-- [ ] Two simultaneous submissions of the same email cannot both create an entry — the uniqueness
-      rule holds at the store, not only in application logic.
+- [ ] Two simultaneous submissions of the same email are checked against the sheet before either
+      writes (best-effort — ADR-007 accepted that a true concurrent race can still both land, since a
+      spreadsheet has no store-level uniqueness constraint; a real race being observed in the sheet is
+      the trigger to revisit that ADR, not to add locking here).
 - [ ] A failed write is reported to the visitor and **their typed values survive** so they can retry.
       Losing someone's input after they cleared a gate would be the worst failure in the product.
 - [ ] No personal data in logs or error output, at any level.

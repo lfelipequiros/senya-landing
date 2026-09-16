@@ -49,7 +49,7 @@ export default [
         {
           patterns: [
             { group: ["@server/*", "*/server/*"], message: "Client code may not import src/server — call the API routes instead (ADR-004)." },
-            { group: ["@supabase/supabase-js"], message: "The Supabase client is server-only (ADR-003) — it may not be imported from src/app." },
+            { group: ["google-auth-library"], message: "The Google Sheets auth client is server-only (ADR-007) — it may not be imported from src/app." },
           ],
         },
       ],
@@ -62,14 +62,14 @@ export default [
     languageOptions: { ...tsBase.languageOptions, globals: globals.node },
     rules: {
       ...tsBase.rules,
-      // ADR-003: only leadsRepository.ts may touch the Supabase client directly.
+      // ADR-007: only leadsRepository.ts may touch the Google Sheets auth client directly.
       "no-restricted-imports": [
         "error",
         {
           paths: [
             {
-              name: "@supabase/supabase-js",
-              message: "Import the Supabase client only inside src/server/data/leadsRepository.ts (ADR-003).",
+              name: "google-auth-library",
+              message: "Import the Sheets auth client only inside src/server/data/leadsRepository.ts (ADR-007).",
             },
           ],
         },
