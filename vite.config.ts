@@ -94,6 +94,9 @@ export default defineConfig(({ mode, command }) => {
 
   // Must match flags.ts: only the literal "true" turns the background on.
   const photoBgOn = env.PHOTO_BG_ON === "true";
+  // TODO: designer test — PHOTO_BG_BW=true swaps in the black-and-white frames. Resolved here rather
+  // than in the component so only one set is ever emitted. Drop with src/app/assets/bg-bw/ if rejected.
+  const bgDir = env.PHOTO_BG_BW === "true" ? "src/app/assets/bg-bw" : "src/app/assets/bg";
 
   return {
     plugins: [
@@ -109,6 +112,7 @@ export default defineConfig(({ mode, command }) => {
     envPrefix: ["VITE_", "PHOTO_BG_"],
     resolve: {
       alias: {
+        "@bg": path.resolve(__dirname, bgDir),
         "@app": path.resolve(__dirname, "src/app"),
         "@server": path.resolve(__dirname, "src/server"),
         "@shared": path.resolve(__dirname, "src/shared"),

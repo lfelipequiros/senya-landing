@@ -24,8 +24,13 @@ import sharp from "sharp";
 
 // Overridable so the pipeline can be exercised against a scratch folder without touching the real
 // assets. Defaults are the only paths anyone should need.
+// TODO: designer test — black-and-white variant (`npm run bake:bg:bw` → src/app/assets/bg-bw/).
+// Converted BEFORE the luminance solve, so the B&W frames land on the same band as the colour ones.
+// Drop this, the script entry, the bg-bw folder and PHOTO_BG_BW if the look is rejected.
+const GRAYSCALE = process.argv.includes("--bw");
+
 const SOURCE_DIR = process.env.BG_SOURCE_DIR ?? "assets from design/bg pics";
-const OUT_DIR = process.env.BG_OUT_DIR ?? "src/app/assets/bg";
+const OUT_DIR = process.env.BG_OUT_DIR ?? (GRAYSCALE ? "src/app/assets/bg-bw" : "src/app/assets/bg");
 
 // Short-side targets. Two variants feed an srcset; the burst is 333ms a frame under a grain layer,
 // so there is nothing to gain from going bigger.
@@ -302,9 +307,10 @@ async function main() {
     if (crop) upright = upright.extract(crop);
 
     const largest = dimensionsFor(framed.width, framed.height, Math.max(...SHORT_SIDES));
-    const base = await upright
-      .resize(largest.width, largest.height, { fit: "fill", kernel: "lanczos3" })
-      .toBuffer();
+    let sized = upright.resize(largest.width, largest.height, { fit: "fill", kernel: "lanczos3" });
+    // Back to 3-channel sRGB after greyscale, so every later step sees the stride it expects.
+    if (GRAYSCALE) sized = sized.grayscale().toColourspace("srgb");
+    const base = await sized.toBuffer();
 
     const before = predict(await histograms(base));
 
