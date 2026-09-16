@@ -1,9 +1,21 @@
-import { useState, type FormEvent } from "react";
+import { Suspense, lazy, useState, type FormEvent } from "react";
 import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 import senyaLogo from "../assets/senya-logo.png";
 import { verifyCode } from "../verifyCode";
 import { submitLead, type LeadInput } from "../submitLead";
+import { photoBgOn } from "../flags";
 import { CaptureForm } from "./CaptureForm";
+
+// The module holds an eager glob of every baked frame, so a static import
+// would pull ~1.5MB of imagery into builds that never show it.
+//
+// The flag test has to wrap the `import()` itself, not just the JSX that uses
+// it. Rollup decides which chunks to emit from the dynamic imports it can
+// reach, so a `lazy(() => import(...))` sitting at module scope emits the
+// chunk — and every asset it references — even when the only branch that
+// renders it is provably dead. Folding it into the ternary is what actually
+// makes PHOTO_BG_ON drop the payload rather than merely hide it.
+const BackgroundCycle = photoBgOn ? lazy(() => import("./BackgroundCycle")) : null;
 
 type Step = "scroll" | "code" | "form" | "done";
 type CodeStatus = "idle" | "checking" | "wrong";
@@ -70,6 +82,14 @@ export function OpeningScene() {
       // idempotent, so the two firing together is harmless.
       onClick={step === "scroll" ? () => setStep("code") : undefined}
     >
+        {/* Runs through the opening and the gate, then freezes to still coral
+            for the capture form onward — nobody fills in three fields
+            one-handed against a background changing three times a second. */}
+        {BackgroundCycle && (
+          <Suspense fallback={null}>
+            <BackgroundCycle active={step === "scroll" || step === "code"} />
+          </Suspense>
+        )}
         <motion.div
           className="opening-mark"
           layout

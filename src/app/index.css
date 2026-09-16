@@ -109,14 +109,105 @@ main {
    the multiply-blended grain lightening the perceived color; --senya-coral
    itself stays the true brand value for everything else (button ink, etc).
    The grain is procedural (SVG feTurbulence, no image request) since design
-   hasn't shipped a real paper texture yet — swap the background-image for a
-   scanned asset later without touching markup if one arrives. */
+   hasn't shipped a real paper texture yet — swap the grain layer's
+   background-image for a scanned asset later without touching markup.
+
+   Four layers, bottom to top:
+     0  the coral itself, as background-color. This is what the holds show.
+     1  .bg-cycle    the photo frames, when PHOTO_BG_ON is on.
+     2  ::after      the grain, multiplied over BOTH of the above.
+     3  the content.
+
+   The grain used to be a background-image with background-blend-mode, which
+   blends only against this element's own background-color — it would have sat
+   UNDER the photos. As a multiplying overlay instead it covers coral and
+   photograph alike, which is what makes the two states feel like one surface
+   and what masks the upscaling on the few small sources. isolation keeps that
+   blend off the page behind. */
 .scene-opening {
+  position: relative;
+  isolation: isolate;
   background-color: var(--senya-opening-bg);
+  color: var(--senya-ink);
+}
+
+.scene-opening::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: 1;
+  pointer-events: none;
   background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='200' height='200'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='3' stitchTiles='stitch'/%3E%3CfeColorMatrix type='matrix' values='0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0 0.5 0'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E");
   background-size: 200px 200px;
-  background-blend-mode: multiply;
-  color: var(--senya-ink);
+  mix-blend-mode: multiply;
+}
+
+.scene-opening > *:not(.bg-cycle) {
+  position: relative;
+  z-index: 2;
+}
+
+/* ── The opening's photo background (PHOTO_BG_ON) ──────────────────────────
+   Holds on coral, cuts through seven full-bleed photographs at ~3/second,
+   holds again. Schedule and sequencing live in backgroundSchedule.ts.
+
+   Every frame is baked so that, after --senya-bg-scrim is composited over it,
+   it sits on exactly the coral's luminance (scripts/bake-bg.mjs). That is what
+   lets the black ink stay as legible on a photograph as on the plain coral,
+   and what makes three changes a second read as a change of content rather
+   than as a flash. The scrim and the bake are therefore coupled: retuning this
+   variable without re-running `npm run bake:bg` re-breaks that parity. */
+:root {
+  --senya-bg-scrim: 0.18;
+}
+
+.bg-cycle {
+  position: absolute;
+  inset: 0;
+  z-index: 0;
+  overflow: hidden;
+  pointer-events: none;
+  /* The frames never affect layout, and paint containment keeps their swaps
+     from invalidating the content above them. */
+  contain: paint;
+}
+
+.bg-frame {
+  position: absolute;
+  inset: 0;
+  opacity: 0;
+}
+
+.bg-frame[data-shown] {
+  opacity: 1;
+}
+
+.bg-frame img {
+  display: block;
+  width: 100%;
+  height: 100%;
+  /* The one treatment every frame gets, regardless of its native aspect: the
+     sources run from 236x379 to 2959x2959 and cover is what makes them one
+     set. It does crop a landscape source hard on a portrait phone, which is
+     accepted — these are backgrounds, not compositions to be read. */
+  object-fit: cover;
+}
+
+/* The scrim belongs to the frame, not to .bg-cycle: a shared sibling would
+   darken the coral during the holds, when no frame is showing at all. */
+.bg-frame::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  background-color: rgb(0 0 0 / var(--senya-bg-scrim));
+}
+
+/* PDR-003: the same seven photographs and the same holds, dissolving rather
+   than cutting. A second choreography, not this one switched off. */
+@media (prefers-reduced-motion: reduce) {
+  .bg-frame {
+    transition: opacity 400ms ease-in-out;
+  }
 }
 
 .opening-mark {

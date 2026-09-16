@@ -168,6 +168,13 @@ copy · imagery and share preview · a motion polish pass.
 - [ ] Real imagery in place and the opening still loads fast on a phone. Real assets are heavier than
       placeholders, and the opening is the highest-bounce moment in the product — weight is a
       brand-perception concern here, not just a performance one.
+      **Partly built ahead of S3:** the opening's background cycle (coral hold → a burst of
+      full-bleed photographs at ~3/second → longer hold → loop) ships behind `PHOTO_BG_ON`, running
+      on *placeholder* imagery pending [Q-02](OPEN-QUESTIONS.md). The choreography is S1 work and is
+      done; what is owed here is owned photographs. Swapping them is re-running `npm run bake:bg`
+      over new sources — no code change. Every frame is tone-mapped to the coral's exact luminance
+      so the black ink is as legible on a photograph as on plain coral; `bake:bg` reports the
+      contrast per frame and fails loudly if a frame comes in below the coral baseline.
 - [ ] Both choreographies are dressed. A reduced-motion visitor gets the full brand, just calmer
       motion — [PDR-003](product/decisions.md) is not a licence to ship them a plainer identity.
 - [ ] The glitch gets the real treatment and **stays terminal**. Making it beautiful must not make it

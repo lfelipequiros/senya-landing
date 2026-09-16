@@ -13,7 +13,7 @@ lives here only because Claude *can't* resolve it from the repo — it needs an 
 | # | Question | Blocks | Who can answer |
 |---|----------|--------|----------------|
 | Q-01 | Consent + privacy for personal data. The form collects name, email and phone/WhatsApp — what consent affordance does scene 3 need, what does it say, and is there a privacy policy URL to point at? Blocks **launch**, not build. | S1, S2 | Owner (possibly with legal advice) |
-| Q-02 | Does the Senya brand identity exist as deliverable assets — logo, type, color, imagery — and when? S3 cannot start without it; this is the least certain input in the plan. | S3 | Owner / whoever owns the brand identity |
+| Q-02 | Does the Senya brand identity exist as deliverable assets — logo, type, color, **imagery we own** — and when? S3 cannot start without it; this is the least certain input in the plan. **Imagery is now the urgent half:** the opening's photo background (`PHOTO_BG_ON`) currently runs on moodboard placeholders from `assets from design/bg pics/` — Getty, GQ, Daniel Arsham and LV/Supreme press shots. Fine for building the choreography, not shippable on a commercial launch page. Swapping them is re-running `npm run bake:bg` over new sources; the blocker is having sources we have the rights to. | S3 | Owner / whoever owns the brand identity |
 | Q-03 | What is the shared access code, and through which channels is it distributed? Needed as a secret before launch (F); the distribution channel also decides how much traffic arrives without it. | F, S1 | Owner |
 
 ## Resolved
