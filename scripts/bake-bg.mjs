@@ -22,8 +22,10 @@ import { mkdir, readdir, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
 import sharp from "sharp";
 
-const SOURCE_DIR = "assets from design/bg pics";
-const OUT_DIR = "src/app/assets/bg";
+// Overridable so the pipeline can be exercised against a scratch folder without touching the real
+// assets. Defaults are the only paths anyone should need.
+const SOURCE_DIR = process.env.BG_SOURCE_DIR ?? "assets from design/bg pics";
+const OUT_DIR = process.env.BG_OUT_DIR ?? "src/app/assets/bg";
 
 // Short-side targets. Two variants feed an srcset; the burst is 333ms a frame under a grain layer,
 // so there is nothing to gain from going bigger.
@@ -33,6 +35,14 @@ const SHORT_SIDES = [640, 900];
 // reading as a mistake. Five of the sources are small enough to hit this cap.
 const MAX_UPSCALE = 2.5;
 const MAX_LONG_SIDE = 1600;
+
+// Extreme aspect ratios are centre-cropped to this before resizing.
+//
+// Without it the long-side cap starves the short side: a 3000x300 panorama came out 1600x160, and
+// `object-fit: cover` then has to blow those 160px across the full height of a phone. Cropping
+// costs nothing, because cover crops exactly this way at display time anyway — the difference is
+// that the pixels we keep are now full resolution instead of being spent on strips no one sees.
+const MAX_ASPECT = 2;
 
 // Contrast compression, applied around PIVOT, so lifting a dark source doesn't blow its highlights
 // straight out.
@@ -98,8 +108,16 @@ const SCRIMMED_LUT = Array.from({ length: 256 }, (_, i) =>
 async function histograms(input) {
   const { data, info } = await sharp(input)
     .flatten({ background: "#000000" })
+    // Explicit, not incidental: a single-channel greyscale or a CMYK source would otherwise give a
+    // stride this loop does not expect, and it would read neighbouring pixels as colour channels —
+    // corrupting the luminance solve silently rather than failing.
+    .toColourspace("srgb")
     .raw()
     .toBuffer({ resolveWithObject: true });
+
+  if (info.channels < 3) {
+    throw new Error(`Expected at least 3 raw channels after sRGB conversion, got ${info.channels}.`);
+  }
 
   const bins = [new Float64Array(256), new Float64Array(256), new Float64Array(256)];
   const stride = info.channels;
@@ -179,6 +197,10 @@ const CORAL_BASELINE = (CORAL_LUMINANCE + 0.05) / (INK_LUMINANCE + 0.05);
 // the darkening appears to do, not how legible the result is.
 const TARGET_LUMINANCE = CORAL_LUMINANCE;
 
+// Slack on the parity check. The solve is exact for real photographs; a flat synthetic colour can
+// land a few hundredths out because the tone curve is evaluated on rounded 0-255 bins.
+const CONTRAST_TOLERANCE = 0.15;
+
 /** WCAG contrast ratio of --senya-ink against a background of the given relative luminance. */
 function inkContrast(luminance) {
   return (luminance + 0.05) / (INK_LUMINANCE + 0.05);
@@ -194,6 +216,20 @@ function slugify(filename) {
 
 function clamp(value, min, max) {
   return Math.min(Math.max(value, min), max);
+}
+
+/** The centre region of an image, with its aspect ratio clamped to MAX_ASPECT. */
+function cropBox(width, height) {
+  const aspect = width / height;
+  if (aspect > MAX_ASPECT) {
+    const w = Math.round(height * MAX_ASPECT);
+    return { left: Math.round((width - w) / 2), top: 0, width: w, height };
+  }
+  if (aspect < 1 / MAX_ASPECT) {
+    const h = Math.round(width * MAX_ASPECT);
+    return { left: 0, top: Math.round((height - h) / 2), width, height: h };
+  }
+  return null;
 }
 
 /** Pixel dimensions for a given short-side target, honouring the upscale cap and long-side cap. */
@@ -223,35 +259,66 @@ async function main() {
 
   const rows = [];
   const slugs = new Set();
+  const skipped = [];
   let bytes = 0;
 
   for (const file of files) {
+    try {
+      await bake(file);
+    } catch (error) {
+      // One unreadable file must not cost the other twenty. A truncated download or a .jpg that is
+      // really a PNG is a normal thing to find in a folder of sourced imagery, and dying on it
+      // would leave nothing baked at all. Collected and reported loudly at the end.
+      skipped.push({ file, reason: error instanceof Error ? error.message : String(error) });
+    }
+  }
+
+  async function bake(file) {
     const slug = slugify(file);
     if (slugs.has(slug)) {
-      throw new Error(`Slug collision on "${slug}" (from "${file}") — rename the source.`);
+      // Not skippable: two sources mapping to one slug means one silently overwrites the other.
+      throw new Error(
+        `slug "${slug}" is already taken by another source — rename one of them ` +
+          `(names differing only in punctuation or case collapse to the same slug).`,
+      );
     }
-    slugs.add(slug);
 
     const source = path.join(SOURCE_DIR, file);
 
-    // Flatten first: a couple of sources carry alpha, and .linear() on an alpha channel produces
-    // nonsense. These are opaque backgrounds either way.
-    const before = predict(await histograms(source));
+    // Everything below works at the LARGEST output size rather than at source resolution. Three
+    // reasons, all of which matter more as the source set changes: the measurement then describes
+    // the pixels actually encoded rather than an original that gets thrown away; a blur sigma means
+    // the same thing whether the source was 400px or 6000px wide; and the pixel walk stays bounded,
+    // so dropping in a 24-megapixel photograph does not make the bake crawl.
+    //
+    // Flatten because a couple of sources carry alpha and .linear() on an alpha channel produces
+    // nonsense — these are opaque backgrounds either way. Rotate before reading any dimension, so
+    // EXIF orientation is applied and width/height are not the wrong way up.
+    const probe = await sharp(source).rotate().metadata();
+    const crop = cropBox(probe.width, probe.height);
+    const framed = { width: crop?.width ?? probe.width, height: crop?.height ?? probe.height };
 
-    // Estimate the lift, condition the source for it, then solve exactly on the conditioned image —
+    let upright = sharp(source).rotate().flatten({ background: "#000000" }).toColourspace("srgb");
+    if (crop) upright = upright.extract(crop);
+
+    const largest = dimensionsFor(framed.width, framed.height, Math.max(...SHORT_SIDES));
+    const base = await upright
+      .resize(largest.width, largest.height, { fit: "fill", kernel: "lanczos3" })
+      .toBuffer();
+
+    const before = predict(await histograms(base));
+
+    // Estimate the lift, condition for it, then solve exactly on the conditioned image —
     // conditioning perturbs luminance, so measuring before it would put the solve off target.
-    const estimate = solveGain(await histograms(source), TARGET_LUMINANCE);
+    const estimate = solveGain(await histograms(base), TARGET_LUMINANCE);
     const excess = Math.max(estimate.gain - CONDITION_ABOVE, 0);
     const denoise = Math.min(DENOISE_PER_GAIN * excess, MAX_DENOISE);
     const saturation = Math.max(1 - DESATURATE_PER_GAIN * excess, MIN_SATURATION);
 
-    let conditioning = sharp(source).rotate().flatten({ background: "#000000" });
+    let conditioning = sharp(base);
     if (denoise >= MIN_DENOISE) conditioning = conditioning.blur(denoise);
     if (saturation < 1) conditioning = conditioning.modulate({ saturation });
-    // Read dimensions off the conditioned buffer, not the source: .rotate() has already applied any
-    // EXIF orientation by this point, so the source metadata can have width/height the wrong way up.
     const conditioned = await conditioning.toBuffer();
-    const metadata = await sharp(conditioned).metadata();
 
     // Solve for the gain that puts this frame's post-scrim luminance exactly on the coral's, then
     // fold the contrast compression in. One .linear() does both:
@@ -262,10 +329,22 @@ async function main() {
     const b = PIVOT * (1 - CONTRAST);
     const after = predict(hist, a, b);
 
+    // A source too dark to reach the band is not shipped. The whole premise is that black ink reads
+    // on every frame — a source that lands at 1.1:1 even at maximum lift would put an invisible
+    // logo on screen for 333ms, and one frame like that undoes the property for the whole burst.
+    // Better to run with fewer photographs and say which one was dropped and why.
+    if (inkContrast(after.luminance) < CORAL_BASELINE - CONTRAST_TOLERANCE) {
+      throw new Error(
+        `too dark to use: reaches only ${inkContrast(after.luminance).toFixed(2)}:1 against the ` +
+          `ink at maximum lift, against a coral baseline of ${CORAL_BASELINE.toFixed(2)}:1. ` +
+          `Lighten the source or replace it.`,
+      );
+    }
+
     const widths = [];
 
     for (const shortSide of SHORT_SIDES) {
-      const { width, height } = dimensionsFor(metadata.width, metadata.height, shortSide);
+      const { width, height } = dimensionsFor(framed.width, framed.height, shortSide);
 
       // A heavily-capped small source can resolve to the same size for both targets — emit it once
       // rather than writing the same file twice and putting a duplicate in the srcset.
@@ -286,7 +365,17 @@ async function main() {
       bytes += avif.length;
     }
 
+    // Claim the slug only once the file has actually produced output, so a source that fails
+    // halfway does not block a later rename from using the same name.
+    slugs.add(slug);
     rows.push({ file, slug, before, after, gain, clamped, widths });
+  }
+
+  if (rows.length === 0) {
+    throw new Error(
+      `No images could be baked from "${SOURCE_DIR}".` +
+        (skipped.length > 0 ? ` ${skipped.length} file(s) failed — see above.` : ""),
+    );
   }
 
   await writeFile(
@@ -330,19 +419,20 @@ async function main() {
     );
   }
 
-  const stranded = rows.filter((r) => r.clamped);
+  if (skipped.length > 0) {
+    console.log(`\n  ${skipped.length} file(s) SKIPPED — not in the background set:`);
+    for (const s of skipped) console.log(`    ${s.file}: ${s.reason}`);
+  }
+
   console.log(
     `\n  ink contrast across the set: ${worst.toFixed(2)}–${best.toFixed(2)}:1` +
       `  (coral baseline ${CORAL_BASELINE.toFixed(2)}:1, scrim ${RUNTIME_SCRIM})`,
   );
   console.log(
-    worst >= CORAL_BASELINE - 0.01
+    worst >= CORAL_BASELINE - CONTRAST_TOLERANCE
       ? `  ✓ every frame matches plain coral — the burst costs no legibility, and lands flat.`
-      : `  ✗ ${stranded.length} frame(s) could not reach the target even at gain ${MAX_GAIN}.`,
+      : `  ✗ a frame is below the coral baseline; the parity check above should have caught it.`,
   );
-  if (stranded.length > 0) {
-    console.log(`    stranded: ${stranded.map((r) => r.slug).join(", ")}`);
-  }
   console.log(`\n  avif total: ${(bytes / 1024).toFixed(0)}KB across all widths\n`);
 }
 

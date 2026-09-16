@@ -157,7 +157,11 @@ export function BackgroundCycle({ active }: BackgroundCycleProps) {
     }
 
     const phase = frameAt(elapsed, reduced);
-    const next = phase.phase === "image" ? phase.slot : null;
+    // Wrap the slot into whatever the burst actually holds. The schedule always emits
+    // BURST_FRAMES slots, but a library smaller than that (or one shrunk by sources the bake
+    // rejected) yields a shorter burst — without the wrap those slots would match no frame and the
+    // burst would flash blank coral in the middle of itself.
+    const next = phase.phase === "image" ? phase.slot % burst.length : null;
     // The frame loop runs at 60fps; the background changes 3 times a second. Only re-render when
     // the visible frame actually changes.
     if (next !== slotRef.current) {
