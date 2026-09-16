@@ -114,7 +114,6 @@ export function OpeningScene() {
 
       {step === "form" && (
         <>
-          <p>Ya casi. Dejanos tus datos para avisarte apenas abrimos.</p>
           <motion.div
             initial={prefersReducedMotion ? { opacity: 0 } : { opacity: 0, y: 16 }}
             animate={{ opacity: 1, y: 0 }}
