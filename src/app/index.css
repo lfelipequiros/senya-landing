@@ -3,6 +3,10 @@
   --senya-coral: #e31b48;
   --senya-opening-bg: #db3d4f;
   --senya-ink: #171717;
+
+  /* One reserved error line. Error copy is kept short enough to fit a single
+     line at 320px so the slot never has to grow — see the note on .field-error. */
+  --error-slot: 1.15rem;
 }
 
 * {
@@ -16,26 +20,79 @@ body,
   margin: 0;
 }
 
+html {
+  /* iOS inflates text on orientation change without this, which reads as the
+     page resizing itself. */
+  -webkit-text-size-adjust: 100%;
+}
+
 body {
   font-family: "Roboto Mono", ui-monospace, monospace;
   background: #0a0a0a;
   color: #f5f5f5;
+  /* No rubber-band bounce: on the locked steps there is nothing to scroll, and
+     the bounce is the one remaining source of unasked-for movement. */
+  overscroll-behavior-y: none;
+}
+
+main {
+  display: contents;
 }
 
 .scene {
-  min-height: 100vh;
+  min-height: 100vh; /* fallback for browsers without svh */
+  min-height: 100svh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   gap: 1rem;
-  padding: 2rem;
+  /* index.html sets viewport-fit=cover, so the insets have to be paid here or
+     content sits under the notch and the home indicator. Side padding is 1.25rem
+     rather than 2rem: at 320px the Spanish strings need the width. */
+  padding-top: max(2rem, env(safe-area-inset-top));
+  padding-bottom: max(2rem, env(safe-area-inset-bottom));
+  padding-left: max(1.25rem, env(safe-area-inset-left));
+  padding-right: max(1.25rem, env(safe-area-inset-right));
   text-align: center;
+}
+
+/* The requirement is that nothing moves on screen once a keyboard can appear.
+   A mobile browser only scroll-jumps to rescue a field the keyboard covered, so
+   the fix is to never let it be covered: size to the small viewport (the height
+   that does NOT change when browser chrome hides), anchor content in the upper
+   band, and take scrolling away entirely. From the code step onward this also
+   enforces screens-map's "a visitor cannot scroll past the gate".
+
+   overflow-y stays auto rather than hidden: on the shortest phones a three-field
+   form plus keyboard genuinely cannot fit, and clipping the submit button would
+   lose a lead. On everything else there is nothing to scroll, so nothing moves. */
+.scene--locked {
+  height: 100vh; /* fallback for browsers without svh */
+  height: 100svh;
+  /* .scene's min-height: 100vh would win over height and re-introduce the
+     large-viewport overflow this rule exists to remove. */
+  min-height: 0;
+  justify-content: flex-start;
+  padding-top: max(8svh, calc(env(safe-area-inset-top) + 1.5rem));
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .scroll-cue {
   opacity: 0.6;
   font-size: 0.9rem;
+}
+
+/* The opening needs real scroll height or the touchmove that advances the gate
+   never fires — .scene is exactly one viewport tall, so on a phone there is
+   nothing to swipe. This gives the document a second viewport to travel through.
+   It unmounts the moment the step advances. */
+.scroll-runway {
+  height: 100vh; /* fallback for browsers without svh */
+  height: 100svh;
+  flex: none;
+  pointer-events: none;
 }
 
 /* First real brand color (from design): coral background with the black mark,
@@ -58,6 +115,14 @@ body {
 .opening-mark {
   width: clamp(120px, 28vw, 220px);
   perspective: 900px;
+  flex: none;
+}
+
+/* On the capture step the mark yields height to the form: three fields, their
+   error slots and the button have to clear the keyboard on a small phone, and
+   the mark is the only block that can give. */
+.scene--compact-mark .opening-mark {
+  width: clamp(72px, 18vw, 110px);
 }
 
 .opening-logo {
@@ -67,19 +132,21 @@ body {
   transform-style: preserve-3d;
 }
 
-.gate-form {
-  display: flex;
-  gap: 0.5rem;
-  flex-wrap: wrap;
-  justify-content: center;
-}
-
+.gate-form,
 .capture-form {
   display: flex;
   flex-direction: column;
   gap: 0.75rem;
   width: min(320px, 100%);
+  flex: none;
+}
+
+.capture-form {
   text-align: left;
+}
+
+.capture-shell {
+  width: min(320px, 100%);
 }
 
 .capture-field {
@@ -91,11 +158,18 @@ body {
 .gate-form input,
 .capture-field input {
   font-family: inherit;
+  /* 16px exactly: below this, iOS Safari zooms the page on focus. In px on
+     purpose — a rem value here breaks silently if the root size ever changes. */
+  font-size: 16px;
+  width: 100%;
+  min-height: 48px; /* 44px iOS / 48px Android minimum tap target */
   padding: 0.6rem 0.8rem;
   border: 1px solid var(--senya-ink);
   border-radius: 4px;
   background: transparent;
   color: var(--senya-ink);
+  /* Removes double-tap-to-zoom and the 300ms tap delay that comes with it. */
+  touch-action: manipulation;
 }
 
 .gate-form input::placeholder,
@@ -106,18 +180,30 @@ body {
 .gate-form button,
 .capture-form button {
   font-family: inherit;
+  font-size: 16px;
+  width: 100%;
+  min-height: 48px;
   padding: 0.6rem 1.2rem;
   border: 1px solid var(--senya-ink);
   border-radius: 4px;
   background: var(--senya-ink);
   color: var(--senya-coral);
   cursor: pointer;
+  touch-action: manipulation;
 }
 
 .gate-form button:disabled,
 .capture-form button:disabled {
   opacity: 0.5;
   cursor: not-allowed;
+}
+
+.gate-form input:focus-visible,
+.capture-field input:focus-visible,
+.gate-form button:focus-visible,
+.capture-form button:focus-visible {
+  outline: 2px solid var(--senya-ink);
+  outline-offset: 2px;
 }
 
 /* Errors are ink, not red: the coral scene background is itself red, so a red
@@ -129,7 +215,66 @@ body {
   font-weight: 700;
 }
 
-.field-error {
+/* The slot is always in the DOM and always occupies its height, empty or not.
+   Two reasons: an appearing error must not push the form under the keyboard,
+   and an aria-live region only announces reliably if it was present before the
+   text arrived. Error copy is kept to one line at 320px so the slot holds. */
+.field-error,
+.gate-wrong {
   margin: 0;
-  font-size: 0.8rem;
+  font-size: 0.875rem;
+  line-height: 1.15rem;
+  min-height: var(--error-slot);
+}
+
+.gate-wrong {
+  text-align: center;
+}
+
+/* The submit failure is the one message allowed to wrap — it is the last thing
+   in the form, so growing it pushes nothing, and it must never be shortened at
+   the cost of clarity (invariant 5: a failed capture fails loudly). */
+.submit-failed {
+  min-height: var(--error-slot);
+}
+
+.visually-hidden {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  padding: 0;
+  margin: -1px;
+  overflow: hidden;
+  clip-path: inset(50%);
+  white-space: nowrap;
+  border: 0;
+}
+
+.done-message {
+  max-width: 24rem;
+}
+
+/* The only breakpoint in the project. Mobile is the design reference
+   (PLAN.md S1), so the stacked layout above is the default and this restores
+   the side-by-side gate on anything wider than a phone. */
+@media (min-width: 481px) {
+  .gate-form {
+    flex-direction: row;
+    flex-wrap: wrap;
+    justify-content: center;
+    gap: 0.5rem;
+  }
+
+  .gate-form input {
+    flex: 1 1 12rem;
+    width: auto;
+  }
+
+  .gate-form button {
+    width: auto;
+  }
+
+  .gate-wrong {
+    flex-basis: 100%;
+  }
 }
