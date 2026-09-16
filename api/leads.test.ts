@@ -4,7 +4,7 @@ import type { VercelRequest, VercelResponse } from "@vercel/node";
 const createMock = vi.fn();
 const getLeadsRepositoryMock = vi.fn(() => ({ create: createMock, findByEmail: vi.fn() }));
 
-vi.mock("../src/server/data/leadsRepository", () => ({
+vi.mock("../src/server/data/leadsRepository.js", () => ({
   getLeadsRepository: getLeadsRepositoryMock,
 }));
 

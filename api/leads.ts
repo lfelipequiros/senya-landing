@@ -1,6 +1,6 @@
 import type { VercelRequest, VercelResponse } from "@vercel/node";
 import { z } from "zod";
-import { getLeadsRepository } from "../src/server/data/leadsRepository";
+import { getLeadsRepository } from "../src/server/data/leadsRepository.js";
 
 const requestSchema = z.object({
   name: z.string().min(1),

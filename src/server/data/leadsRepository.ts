@@ -2,9 +2,13 @@ import { randomUUID } from "node:crypto";
 import { JWT } from "google-auth-library";
 // Relative, not the `@shared/*` alias: this file is transitively loaded by vite.config.ts itself
 // (via api/leads.ts, for the dev API shim), and Vite's own config loader doesn't apply the
-// `resolve.alias` the config defines — only app code served afterwards gets that. A relative import
-// resolves correctly at every layer (tsc, Vitest, the Vite config loader, Vercel's function bundler).
-import { err, ok, type Result } from "../../shared/result";
+// `resolve.alias` the config defines — only app code served afterwards gets that.
+// The explicit `.js` extension (naming the compiled output, not the `.ts` source) is required too:
+// package.json's `"type": "module"` puts Vercel's function bundler under Node's strict ESM resolver,
+// which — unlike our tsconfig's `moduleResolution: "bundler"` or Vite/Vitest's own resolver — does not
+// infer extensions on relative specifiers (confirmed via a TS2835 diagnostic in Vercel's own build log
+// after `/api/leads` 500'd in production with ERR_MODULE_NOT_FOUND).
+import { err, ok, type Result } from "../../shared/result.js";
 
 export interface NewLead {
   name: string;
