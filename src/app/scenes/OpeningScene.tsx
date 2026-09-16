@@ -71,7 +71,6 @@ export function OpeningScene() {
           }
         />
       </div>
-      <h1>SENYA</h1>
       {step === "scroll" && (
         <>
           <p className="scroll-cue">Desliza para continuar ↓</p>
@@ -103,11 +102,11 @@ export function OpeningScene() {
               autoFocus
             />
             <button type="submit" disabled={codeStatus === "checking" || code.length === 0}>
-              Entrar
+              ENTRAR
             </button>
           </motion.form>
           {codeStatus === "wrong" && (
-            <p className="gate-wrong">Ese código no es válido. (el glitch real llega con S1)</p>
+            <p className="gate-wrong">Incorrecto</p>
           )}
         </>
       )}

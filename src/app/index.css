@@ -120,9 +120,13 @@ body {
   cursor: not-allowed;
 }
 
+/* Errors are ink, not red: the coral scene background is itself red, so a red
+   error sat at ~1.4:1 against it and was unreadable. Ink carries the contrast
+   (~5.3:1) and weight carries the "this is an error" signal instead of hue. */
 .gate-wrong,
 .field-error {
-  color: #b3001b;
+  color: var(--senya-ink);
+  font-weight: 700;
 }
 
 .field-error {

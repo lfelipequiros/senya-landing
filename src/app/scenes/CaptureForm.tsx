@@ -107,7 +107,7 @@ export function CaptureForm({ onSubmit }: CaptureFormProps) {
         </p>
       )}
       <button type="submit" disabled={submitting}>
-        {submitting ? "Enviando…" : "Sumarme a la lista"}
+        {submitting ? "Enviando…" : "ENTRAR"}
       </button>
     </form>
   );
