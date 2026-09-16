@@ -18,7 +18,7 @@ but why it became that.
 ## Decisions
 
 ### ADR-001 — Plan-first, three-gate lifecycle
-**Status:** accepted
+**Status:** superseded by ADR-006
 **Context.** A small team can't afford code that silently drifts from intent; "temporary" shortcuts
 become permanent when they're invisible.
 **Decision.** All application code flows through `tech-planning` → `tech-build` → `tech-qa`, with a
@@ -51,26 +51,26 @@ needed, that's a fresh decision, not an extension of this one.
 ### ADR-003 — Supabase Postgres as the data store; a single `LeadsRepository` seam
 **Status:** accepted
 **Context.** One entity (`leads`), one write path, one dedupe rule (unique email), and the owner
-explicitly chose no admin surface (02.7) — reading the list has to happen *somewhere* without building
+explicitly chose no admin surface (S2) — reading the list has to happen *somewhere* without building
 one. Options weighed: (a) a bespoke Postgres instance + a hand-rolled admin view — most control, most
 build cost, directly contradicts the "capture only" scope; (b) a spreadsheet-backed service (e.g.
 Google Sheets as a "database") — zero infra, but no real uniqueness constraint and a painful upgrade
 path the moment this project grows; (c) **Supabase Postgres**, written through a single typed seam.
 Scored: **Confidence** high (managed Postgres, a JS client, no ops) · **Time-to-market** best (a table
 + a `NOT NULL, UNIQUE` constraint is the entire setup) · **Reliability** high (a real DB enforces the
-uniqueness invariant 02.7 depends on, even under a concurrent double-submit — a spreadsheet cannot) ·
+uniqueness invariant S2 depends on, even under a concurrent double-submit — a spreadsheet cannot) ·
 **ROI** best — Supabase's own table editor **is** the "retrieve and export the list without an admin
-surface" capability 02.7 asks for, at zero build cost.
+surface" capability S2 asks for, at zero build cost.
 **Decision.** One Postgres table (`leads`, schema in [`00-overview.md`](00-overview.md)) via Supabase.
 All access goes through a `LeadsRepository` interface (`create`, `findByEmail`, both returning
 `Result<T>`) at `src/server/data/leadsRepository.ts` — **the seam**. Two implementations:
-`SupabaseLeadsRepository` (prod) and `InMemoryLeadsRepository` (tests/fixture, per 01.4's "trivial
-fixture implementation" requirement). **Nothing outside this file may import the Supabase client or
-write raw SQL/table access** — that is the seam invariant every later gate checks against.
-**Consequence.** A schema change is only safe in the same change set as a `LeadsRepository` update
-(CLAUDE.md §6, §8 — already a house standard, now concrete). Swapping the store later means writing one
-new class, not touching call sites. Email uniqueness is enforced at the database level, not only in
-application code, closing the concurrency gap 02.7 names as a resolved edge case.
+`SupabaseLeadsRepository` (prod) and `InMemoryLeadsRepository` (tests/fixture). **Nothing outside this
+file may import the Supabase client or write raw SQL/table access** — that is the seam invariant every
+later change is checked against (CLAUDE.md invariant #2).
+**Consequence.** A schema change is only safe in the same change set as a `LeadsRepository` update.
+Swapping the store later means writing one new class, not touching call sites. Email uniqueness is
+enforced at the database level, not only in application code, closing the double-submit concurrency
+gap as a resolved edge case.
 
 ### ADR-004 — The access code is verified server-side; it never ships to the client
 **Status:** accepted
@@ -83,12 +83,12 @@ high · **Time-to-market** trivial cost over option (a) — one serverless funct
 high · **ROI** decisive — this is the one place a security shortcut would visibly contradict the
 product's own premise, so the "cheap" option isn't actually cheap.
 **Decision.** `POST /api/verify-code` receives the entered code, compares it server-side against an
-environment variable (`ACCESS_CODE`, documented in `.env.example` per 01.3), and returns only a
+environment variable (`ACCESS_CODE`, documented in `.env.example`), and returns only a
 boolean — never the code itself, never a token that encodes it. The client holds no copy of the secret
 at any point.
-**Consequence.** Governs [02.4](../backlog/epic-02-gated-flow/02.4.md)'s implementation directly — the
-gate's normalization (casing/whitespace) happens server-side, in the one place that sees the real
-value. No client-side fallback path may be added without superseding this ADR.
+**Consequence.** Governs Scene 2's implementation directly (S1) — the gate's normalization
+(casing/whitespace) happens server-side, in the one place that sees the real value. No client-side
+fallback path may be added without superseding this ADR.
 
 ### ADR-005 — Single-tenant: no tenant key anywhere in this schema
 **Status:** accepted
@@ -101,3 +101,24 @@ exactly one brand, one drop, one list.
 architectural decision (a real multi-tenancy retrofit, not a column you can add casually to a live
 `leads` table with a `UNIQUE(email)` constraint) — flag it as a *decision*-lane finding the moment it
 comes up, don't extend this schema ad hoc.
+
+### ADR-006 — Drop the three-gate lifecycle for a single plan file and a look in the browser
+**Status:** accepted
+**Context.** ADR-001's `product-check` → `tech-planning` → `tech-build` → `tech-qa` lifecycle, its
+status board, its backlog of per-story files, its debt log, and its session journal produced roughly
+2,500 lines of process governing about 100 lines of shipped code (CLAUDE.md §7). This is a solo
+developer on a single-tenant, four-story, no-deadline project — the ceremony's cost was no longer
+buying back more drift-risk than it cost in overhead, and it was never proportionate for a repo this
+small.
+**Decision.** One file, [`PLAN.md`](../PLAN.md), carries both the plan and the status board. Building
+still happens on one branch per story with a PR at the end, but with no gate skills and no per-story
+approval ceremony. A story that changes a shape (schema, seam, API contract) still gets discussed and
+approved before code, per CLAUDE.md §5 — that discipline is kept; the surrounding process scaffold is
+not. **S2 (capture) keeps an Opus QA subagent** — it is the one place a failure is invisible — every
+other story is checked by opening it in a browser.
+**Consequence.** `PROJECT-STATUS.md`, `backlog/`, `TECH-DEBT.md`, `handoffs/`, `cockpit/`, the
+`board-guard` CI workflow, and the `.githooks/` status guard are removed — `PLAN.md` and this ADR log
+are what's left. A deliberate shortcut now goes in a `TODO:` comment next to the code rather than a
+debt-log entry (CLAUDE.md §6). This trades traceability of *process* for speed; it does not relax the
+five invariants (CLAUDE.md §4), which stay mechanically enforced regardless of how lightly the rest of
+the workflow runs.

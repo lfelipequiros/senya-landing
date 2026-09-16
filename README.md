@@ -1,41 +1,37 @@
 # Senya 1st Landing
 
-(to define: a one-sentence description of what this project is — resolve during the `qcode-charter` pass.)
+A gated, animation-led launch experience for the Senya clothing brand that converts pre-launch
+curiosity into a contact list. See [`CLAUDE.md` §1](CLAUDE.md) for the full framing and
+[`architecture/00-overview.md`](architecture/00-overview.md) for the technical shape.
 
-(to define: a short paragraph — what it does, for whom — resolve during the `qcode-charter` pass.)
+**Hosted on:** GitHub, deployed on Vercel.
 
-**Hosted on:** GitHub
+## Running the app
+
+```sh
+npm install
+npm run dev        # local dev server
+npm run typecheck  # strict TS, project-wide
+npm run lint
+npm run test        # vitest
+npm run build       # production build
+```
+
+Copy [`.env.example`](.env.example) to `.env` and fill in real values before running anything that
+touches the data seam or the code gate. Stack and architecture: [`architecture/00-overview.md`](architecture/00-overview.md).
 
 ## Where things live
 
-This repo is run with a plan-first, single-source-of-truth operating system. Start here:
-
 - **[CLAUDE.md](CLAUDE.md)** — orientation: what we're building, how we decide, how to operate.
-- **[PROJECT-STATUS.md](PROJECT-STATUS.md)** — the live status board. **Read it first to know where
-  things stand.** It owns status; it links to everything else.
+- **[PLAN.md](PLAN.md)** — what's left to build, and its status. **Read it first to know where
+  things stand.**
 - **[architecture/](architecture/)** — the Architecture Specification (the *why*) + the ADR log.
-- **[backlog/](backlog/)** — the sequenced epic/story plan (the *what next*).
+- **[product/](product/)** — the product decisions and screens map (why the product behaves as it
+  does).
 - **[OPEN-QUESTIONS.md](OPEN-QUESTIONS.md)** — decisions blocked on info someone has to go get.
-- **[TECH-DEBT.md](TECH-DEBT.md)** — deliberate shortcuts, each with a paydown trigger.
-- **[handoffs/](handoffs/)** — the session journal (resume a chat without replaying the transcript).
 
-## The lifecycle
+## How we work
 
-Every new product idea, then all application code, flows through four gates (skills under
-`.claude/skills/`): **`product-check`** (shape the requirement, place it in the backlog) →
-**`tech-planning`** (approved story) → **`tech-build`** (implement only that increment) →
-**`tech-qa`** (independent done-done pass, and the only one that merges). Status moves on the board
-in the same commit; a `.githooks/pre-commit` guard backstops it. On a fresh clone, activate the hook
-once:
-
-```sh
-git config core.hooksPath .githooks
-```
-
-## Build cockpit
-
-A zero-dependency progress view, generated from the board + backlog:
-
-```sh
-node cockpit/generate.mjs   # writes cockpit/index.html, then open it
-```
+Pick the next story from [PLAN.md](PLAN.md), build it on one branch, check it (a browser look for
+motion, an Opus QA subagent for the capture story), then open a PR and tick the box. See
+[CLAUDE.md §5](CLAUDE.md) for the full process.
