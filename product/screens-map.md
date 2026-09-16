@@ -25,8 +25,8 @@ any of them is a change to the same surface.
 
 | Route / Entry point | Surface | Job to be done (one line) | Story | Status |
 |---|---|---|---|---|
-| `/` — scene 1 | Opening | Assert the brand is worth attention and earn the scroll — no navigation, no explanation. | [S1](../PLAN.md) | `after F` |
-| `/` — scene 2 (on scroll) | The code gate | Separate invited visitors from passers-by with one shared code; wrong code ends the run. | [S1](../PLAN.md) | `after F` |
+| `/` — scene 1 | Opening | Assert the brand is worth attention and earn the tap — no navigation, no explanation. | [S1](../PLAN.md) | `after F` |
+| `/` — scene 2 (on tap) | The code gate | Separate invited visitors from passers-by with one shared code; wrong code ends the run. | [S1](../PLAN.md) | `after F` |
 | `/` — scene 3 (gate cleared) | The lead form | Capture name, email, and phone/WhatsApp with as little friction as possible. | [S1](../PLAN.md) | `after F` |
 | `/` — scene 4 (submitted) | Confirmation / already-listed | Leave no doubt the visitor is on the list — two endings, new and returning. | [S1](../PLAN.md) | `after F` |
 

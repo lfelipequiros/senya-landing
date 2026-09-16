@@ -39,9 +39,20 @@ main {
   display: contents;
 }
 
+/* The experience never scrolls: the opening advances on a tap, and every step
+   after it is one a keyboard can appear on. So the frame is fixed to the small
+   viewport — the height that does NOT change when mobile browser chrome hides —
+   and page scrolling is gone entirely, which is also what screens-map asks for
+   ("a visitor cannot scroll past the gate").
+
+   overflow-y stays auto rather than hidden: on the shortest phones a three-field
+   form plus keyboard genuinely cannot fit, and clipping the submit button would
+   lose a lead. On every normal phone there is nothing to scroll, so nothing moves. */
 .scene {
-  min-height: 100vh; /* fallback for browsers without svh */
-  min-height: 100svh;
+  height: 100vh; /* fallback for browsers without svh */
+  height: 100svh;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -57,42 +68,38 @@ main {
   text-align: center;
 }
 
-/* The requirement is that nothing moves on screen once a keyboard can appear.
-   A mobile browser only scroll-jumps to rescue a field the keyboard covered, so
-   the fix is to never let it be covered: size to the small viewport (the height
-   that does NOT change when browser chrome hides), anchor content in the upper
-   band, and take scrolling away entirely. From the code step onward this also
-   enforces screens-map's "a visitor cannot scroll past the gate".
+/* A mobile browser only scroll-jumps to rescue a field the keyboard covered, so
+   on every step where a keyboard can appear, content is anchored in the upper
+   band and never gets covered in the first place. */
+.scene--tappable {
+  cursor: pointer;
+}
 
-   overflow-y stays auto rather than hidden: on the shortest phones a three-field
-   form plus keyboard genuinely cannot fit, and clipping the submit button would
-   lose a lead. On everything else there is nothing to scroll, so nothing moves. */
-.scene--locked {
-  height: 100vh; /* fallback for browsers without svh */
-  height: 100svh;
-  /* .scene's min-height: 100vh would win over height and re-introduce the
-     large-viewport overflow this rule exists to remove. */
-  min-height: 0;
+.scene--top {
   justify-content: flex-start;
   padding-top: max(8svh, calc(env(safe-area-inset-top) + 1.5rem));
-  overflow-y: auto;
-  overscroll-behavior: contain;
 }
 
-.scroll-cue {
-  opacity: 0.6;
-  font-size: 0.9rem;
-}
-
-/* The opening needs real scroll height or the touchmove that advances the gate
-   never fires — .scene is exactly one viewport tall, so on a phone there is
-   nothing to swipe. This gives the document a second viewport to travel through.
-   It unmounts the moment the step advances. */
-.scroll-runway {
-  height: 100vh; /* fallback for browsers without svh */
-  height: 100svh;
+/* The cue is a real button, not styled text: tapping anywhere on the opening
+   advances, but that gesture has to exist for keyboard and screen-reader
+   visitors too, and a button is the one element that carries it for free. */
+.tap-cue {
+  font-family: inherit;
+  font-size: 1rem;
+  color: inherit;
+  background: none;
+  border: 0;
+  padding: 0.75rem 1rem;
+  min-height: 48px;
+  opacity: 0.7;
+  cursor: pointer;
+  touch-action: manipulation;
   flex: none;
-  pointer-events: none;
+}
+
+.tap-cue:focus-visible {
+  outline: 2px solid var(--senya-ink);
+  outline-offset: 2px;
 }
 
 /* First real brand color (from design): coral background with the black mark,

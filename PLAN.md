@@ -49,8 +49,9 @@ This is one story and not six because the scenes share one state machine and one
 Building them separately means building the seams between them six times.
 
 ### The state machine
-- [ ] Scroll carries scene 1 → 2. Acceptance drives 3 and 4 **in place**, with no page change.
-- [ ] A visitor cannot scroll past the gate.
+- [ ] A tap carries scene 1 → 2 ([PDR-005](product/decisions.md)). Acceptance drives 3 and 4 **in
+      place**, with no page change.
+- [ ] The experience never scrolls at all — the frame is fixed to the small viewport throughout.
 - [ ] No URL reaches scene 3 or 4. Attempting it starts the run at scene 1.
 - [ ] A refresh at any point restarts the full run from scene 1. No client memory of any kind.
 
@@ -65,10 +66,12 @@ Building them separately means building the seams between them six times.
 
 ### Scene 1 — opening
 - [ ] Plays on load with placeholder marks and finished timing.
-- [ ] A visible cue communicates that scrolling continues the experience. Not optional polish — a
-      visitor who does not realize scrolling is the verb is a total loss.
-- [ ] Scrolling during the animation advances immediately. The scroll wins; never trap someone who
+- [ ] A visible cue communicates that tapping continues the experience. Not optional polish — a
+      visitor who does not realize tapping is the verb is a total loss.
+- [ ] Tapping during the animation advances immediately. The tap wins; never trap someone who
       is already convinced.
+- [ ] The whole opening is the tap target, not just the cue — but the cue is a real button, so the
+      same move exists for keyboard and screen-reader visitors.
 - [ ] Stays short. It is paid for on every single visit ([PDR-002](product/decisions.md)).
 
 ### Scene 2 — the gate

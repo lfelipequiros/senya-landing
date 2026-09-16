@@ -110,3 +110,28 @@ and naming it accurately prevents both a wrong mental model for visitors and a w
 realistic-length placeholder copy in both languages — not lorem ipsum, which would conceal exactly the
 wrapping and timing problems it exists to surface. Final wording arrives in [S3](../PLAN.md) through
 that same scaffolding, in both languages together. Validation and error messages are localized too.
+
+### PDR-005 — A tap carries scene 1 → 2, and the experience never scrolls
+
+**Decision.** The opening advances to the gate on a **tap**, not a scroll. The whole opening surface is
+the target; the visible cue ("Tocá para continuar") is a real button so the same move exists for
+keyboard and screen-reader visitors. With scroll no longer the verb anywhere, the experience does not
+scroll at all: the frame is fixed to the small viewport for the whole run. Supersedes the scroll-driven
+scene 1 → 2 transition previously recorded here and in
+[`screens-map.md`](screens-map.md); everything else about the flow is unchanged — acceptance still
+drives scenes 3 and 4 in place, and a visitor still cannot get past the gate.
+
+**Context.** Mobile is the design reference ([S1](../PLAN.md)), and on a phone the scroll gesture was
+both unreliable and unnecessary. The opening is exactly one viewport tall, so there was nothing to
+scroll and the `touchmove` that advanced the gate frequently never fired — "Desliza para continuar"
+could become a dead end, which is the total loss S1 names. Keeping it working required giving the
+document a second viewport of empty runway purely so a swipe had somewhere to go: scroll affordance
+manufactured for its own sake. A tap is the gesture a phone visitor reaches for first, it cannot
+silently fail, and removing scroll entirely also removes the last source of unasked-for movement on
+screen — the owner's standing requirement that the whole UI stay visible and still.
+
+**Consequence.** No surface in the product is scrollable, so "a visitor cannot scroll past the gate" is
+now structural rather than enforced. The opening's cue must read as tappable, which is a dressing
+concern for [S3](../PLAN.md) — a cue that reads as a label rather than a control is the failure mode to
+watch. The tap target is the full surface, so nothing else on the opening may become interactive
+without disambiguating it first.

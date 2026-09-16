@@ -1,4 +1,4 @@
-import { useEffect, useState, type FormEvent } from "react";
+import { useState, type FormEvent } from "react";
 import { motion, useReducedMotion } from "framer-motion";
 import senyaLogo from "../assets/senya-logo.png";
 import { verifyCode } from "../verifyCode";
@@ -24,25 +24,6 @@ export function OpeningScene() {
   const [codeStatus, setCodeStatus] = useState<CodeStatus>("idle");
   const [duplicate, setDuplicate] = useState(false);
 
-  useEffect(() => {
-    if (step !== "scroll") return;
-    const reveal = () => setStep("code");
-    window.addEventListener("wheel", reveal, { passive: true, once: true });
-    window.addEventListener("touchmove", reveal, { passive: true, once: true });
-    return () => {
-      window.removeEventListener("wheel", reveal);
-      window.removeEventListener("touchmove", reveal);
-    };
-  }, [step]);
-
-  // Leaving the opening takes the scroll runway with it, so the document can be
-  // left part-scrolled at the moment the gate appears. Return to the top once,
-  // before the locked scene removes scrolling entirely.
-  useEffect(() => {
-    if (step === "scroll") return;
-    window.scrollTo(0, 0);
-  }, [step]);
-
   async function handleCodeSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     setCodeStatus("checking");
@@ -64,23 +45,22 @@ export function OpeningScene() {
     return true;
   }
 
-  // Everything past the opening is a step where a keyboard can appear, so the
-  // frame is locked: small-viewport height, content in the upper band, no page
-  // scrolling. See .scene--locked in index.css for why.
-  const locked = step !== "scroll";
-
   return (
-    <>
-      <section
-        className={[
-          "scene",
-          "scene-opening",
-          locked ? "scene--locked" : "",
-          step === "form" ? "scene--compact-mark" : "",
-        ]
-          .filter(Boolean)
-          .join(" ")}
-      >
+    <section
+      className={[
+        "scene",
+        "scene-opening",
+        step === "scroll" ? "scene--tappable" : "scene--top",
+        step === "form" ? "scene--compact-mark" : "",
+      ]
+        .filter(Boolean)
+        .join(" ")}
+      // The whole opening is the target, not just the cue — on a phone the
+      // thumb lands wherever it lands. The cue below is a real button so the
+      // same move exists for keyboard and screen-reader visitors; advancing is
+      // idempotent, so the two firing together is harmless.
+      onClick={step === "scroll" ? () => setStep("code") : undefined}
+    >
         <div className="opening-mark">
           <motion.img
             src={senyaLogo}
@@ -96,7 +76,11 @@ export function OpeningScene() {
             }
           />
         </div>
-        {step === "scroll" && <p className="scroll-cue">Desliza para continuar ↓</p>}
+        {step === "scroll" && (
+          <button type="button" className="tap-cue" onClick={() => setStep("code")}>
+            Tocá para continuar
+          </button>
+        )}
 
         {step === "code" && (
           <motion.form
@@ -158,12 +142,6 @@ export function OpeningScene() {
               : "BIENVENIDO, HAS SIDO REGISTRADO, LAS SEÑALES SERÁN CLARAS"}
           </p>
         )}
-      </section>
-
-      {/* The opening is exactly one viewport tall, so on a phone there is
-          nothing to swipe and the touchmove that advances the gate may never
-          fire. This gives the document somewhere to travel. */}
-      {step === "scroll" && <div className="scroll-runway" aria-hidden="true" />}
-    </>
+    </section>
   );
 }
